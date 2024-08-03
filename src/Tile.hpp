@@ -38,9 +38,9 @@ public:
 
     sf::Vector2f GetSize() const;
 
-    bool isMarkEmpty();
-    bool isMarkX();
-    bool isMarkQueen();
+    bool isMarkEmpty() const;
+    bool isMarkX() const;
+    bool isMarkQueen() const;
 
     void ClearMark();
     void PlaceX();

@@ -141,17 +141,17 @@ sf::Vector2f CTile::GetSize() const
     return m_tile.getSize();
 }
 
-bool CTile::isMarkEmpty()
+bool CTile::isMarkEmpty() const
 {
     return m_mark.empty();
 }
 
-bool CTile::isMarkX()
+bool CTile::isMarkX() const
 {
     return m_mark == "X";
 }
 
-bool CTile::isMarkQueen()
+bool CTile::isMarkQueen() const
 {
     return m_mark == "Q";
 }

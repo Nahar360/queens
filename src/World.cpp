@@ -11,6 +11,7 @@
 #include "GlobalSettings.hpp"
 #include "SFML/Graphics/Color.hpp"
 #include "Tile.hpp"
+#include "UiSettings.hpp"
 
 void CWorld::Init()
 {
@@ -48,6 +49,7 @@ void CWorld::InitTilesFromRepr(const std::vector<std::vector<int>>& repr)
                 const int b = rand() % 255;
                 const int g = rand() % 255;
                 color = sf::Color(r, g, b);
+                m_numberOfDifferentRegions++;
             }
             colorSet.push_back(std::make_pair(colorId, color));
             
@@ -135,17 +137,156 @@ void CWorld::Load(const std::string& worldFileName)
 
 void CWorld::Check()
 {
-    // Check for rules
     // 1 and only 1 Q in each row, column and colour region
+    CheckRows();
+    CheckColumns();
+    CheckRegions();
+
     // 2 Qs cannot touch each other, not even diagonally
+    CheckProximities();
+}
 
-    // Row check
+void CWorld::CheckRows()
+{
+    for (int i = 0; i < m_tiles.size(); i++)
+    {
+        const int numberOfQueensInRow = GetNumberOfQueensInVector(m_tiles[i]);
+        if (numberOfQueensInRow != 1)
+        {
+            std::cout << "Not 1 queen in row " << i + 1 << std::endl;
+        }
+    }
+}
 
-    // Column check
+void CWorld::CheckColumns()
+{
+    for (int i = 0; i < m_tiles.size(); i++)
+    {
+        std::vector<CTile> column;
+        for (int j = 0; j < m_tiles[0].size(); j++)
+        {
+            column.push_back(m_tiles[j][i]);
+        }
 
-    // Colour region check
+        const int numberOfQueensInColumn = GetNumberOfQueensInVector(column);
+        if (numberOfQueensInColumn != 1)
+        {
+            std::cout << "Not 1 queen in column " << i + 1 << std::endl;
+        }
+    }
+}
 
-    // Proximity check
+void CWorld::CheckRegions()
+{
+    for (int i = 1; i < m_numberOfDifferentRegions + 1; i++) // because regions start from 1
+    {
+        std::vector<CTile> region;
+        for (int j = 0; j < m_tiles.size(); j++)
+        {
+            for (int k = 0; k < m_tiles[0].size(); k++)
+            {
+                if (m_tiles[j][k].GetColorId() == i)
+                {
+                    region.push_back(m_tiles[j][k]);
+                }
+            }
+        }
+
+        const int numberOfQueensInRegion = GetNumberOfQueensInVector(region);
+        if (numberOfQueensInRegion != 1)
+        {
+            std::cout << "Not 1 queen in region " << i << std::endl;
+        }
+    }
+}
+
+void CWorld::CheckProximities()
+{
+    for (int i = 0; i < m_tiles.size(); i++)
+    {
+        for (int j = 0; j < m_tiles[0].size(); j++)
+        {
+            if (m_tiles[i][j].isMarkQueen())
+            {
+                const std::vector<bool> neighbours = GetNeighboursOfTile(m_tiles[i][j]);
+                int numberOfQueensInProximity = 0;
+                for (int k = 0; k < neighbours.size(); k++)
+                {
+                    if (neighbours[k] == true)
+                    {
+                        numberOfQueensInProximity++;
+                    }
+                }
+                if (numberOfQueensInProximity > 0)
+                {
+                    std::cout << "Other queens in proximity of Queen " << m_tiles[i][j].GetId() << std::endl;
+                }
+            }
+        }
+    }
+}
+
+std::vector<bool> CWorld::GetNeighboursOfTile(const CTile& tile)
+{
+    // clang-format off
+    const bool topLeftTile =      GetTileHasQueenWithOffset(tile, {-1, -1});
+    const bool topCenterTile =    GetTileHasQueenWithOffset(tile, {-1, 0});
+    const bool topRightTile =     GetTileHasQueenWithOffset(tile, {-1, 1}); 
+    const bool leftTile  =        GetTileHasQueenWithOffset(tile, {0, -1});
+    const bool rightTile =        GetTileHasQueenWithOffset(tile, {0, 1});
+    const bool bottomLeftTile =   GetTileHasQueenWithOffset(tile, {1, -1});
+    const bool bottomCenterTile = GetTileHasQueenWithOffset(tile, {1, 0});
+    const bool bottomRightTile =  GetTileHasQueenWithOffset(tile, {1, 1});
+    // clang-format on
+
+    std::vector<bool> neighbours{
+        topLeftTile, topCenterTile, topRightTile, leftTile,
+        rightTile, bottomLeftTile, bottomCenterTile, bottomRightTile
+    };
+
+    return neighbours;
+}
+
+bool CWorld::GetTileHasQueenWithOffset(const CTile& tile, const sf::Vector2i& offset)
+{
+    const sf::Vector2i tileCoords = tile.GetCoords();
+    const sf::Vector2i otherTileCoord = sf::Vector2i(tileCoords.x + offset.x, tileCoords.y + offset.y);
+
+    if (IsCoordInBounds(otherTileCoord))
+    {
+        return m_tiles[otherTileCoord.x][otherTileCoord.y].isMarkQueen();
+    }
+
+    // If it is out of bounds, we just return false
+    return false;
+}
+
+bool CWorld::IsCoordInBounds(const sf::Vector2i coord)
+{
+    const bool xCoordIsNotNegative = coord.x >= 0;
+    const bool yCoordIsNotNegative = coord.y >= 0;
+    const bool xCoordIsNotBiggerThanNumCols = coord.x < UiSettings::WORLD_COLS;
+    const bool yCoordIsNotBiggerThanNumRows = coord.y < UiSettings::WORLD_ROWS;
+
+    const bool isCoordInBounds =
+        xCoordIsNotNegative && yCoordIsNotNegative && xCoordIsNotBiggerThanNumCols && yCoordIsNotBiggerThanNumRows;
+
+    return isCoordInBounds;
+}
+
+int CWorld::GetNumberOfQueensInVector(const std::vector<CTile>& v) const
+{
+    int numberOfQueens = 0;
+
+    for (int i = 0; i < v.size(); i++)
+    {
+        if (v[i].isMarkQueen())
+        {
+            numberOfQueens++;
+        }
+    }
+
+    return numberOfQueens;
 }
 
 void CWorld::ClearMarks()
