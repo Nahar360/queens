@@ -132,3 +132,51 @@ void CWorld::Load(const std::string& worldFileName)
 
     InitTilesFromRepr(repr);
 }
+
+void CWorld::Check()
+{
+    // Check for rules
+    // 1 and only 1 Q in each row, column and colour region
+    // 2 Qs cannot touch each other, not even diagonally
+
+    // Row check
+
+    // Column check
+
+    // Colour region check
+
+    // Proximity check
+}
+
+void CWorld::ClearMarks()
+{
+    for (int i = 0; i < m_tiles.size(); i++)
+    {
+        for (int j = 0; j < m_tiles[0].size(); j++)
+        {
+            m_tiles[i][j].ClearMark();
+        }
+    }
+}
+
+void CWorld::Reveal()
+{
+    // Fill the board with X
+    for (int i = 0; i < m_tiles.size(); i++)
+    {
+        for (int j = 0; j < m_tiles[0].size(); j++)
+        {
+            m_tiles[i][j].PlaceX();
+        }
+    }
+
+    // Place Q in their right tiles
+    m_tiles[0][5].PlaceQueen();
+    m_tiles[1][7].PlaceQueen();
+    m_tiles[2][4].PlaceQueen();
+    m_tiles[3][1].PlaceQueen();
+    m_tiles[4][3].PlaceQueen();
+    m_tiles[5][6].PlaceQueen();
+    m_tiles[6][2].PlaceQueen();
+    m_tiles[7][0].PlaceQueen();
+}

@@ -33,19 +33,31 @@ public:
     void SetPosition(const sf::Vector2f& pos);
     sf::Vector2f GetPosition() const;
 
+    void SetMark(const std::string& mark);
+    std::string GetMark() const;
+
     sf::Vector2f GetSize() const;
+
+    bool isMarkEmpty();
+    bool isMarkX();
+    bool isMarkQueen();
+
+    void ClearMark();
+    void PlaceX();
+    void PlaceQueen();
 
 private:
     sf::RectangleShape m_tile;
 
     sf::Font m_font;
-    sf::Text m_idText;
+    sf::Text m_markText;
 
     int m_id;
     int m_colorId;
     sf::Color m_color;
     sf::Vector2i m_coords;
     sf::Vector2f m_pos;
+    std::string m_mark;
 
     // -------
 

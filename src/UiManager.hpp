@@ -37,12 +37,17 @@ private:
     void UpdateMousePosition(sf::RenderWindow& window);
     void UpdateBackgroundColor();
 
+    void ShowRules();
+
     void PrintWorldRepresentation(CWorld& world);
 
     void LoadWorld(CWorld& world);
 
+    void Check(CWorld& world);
+    void ClearMarks(CWorld& world);
+    void Reveal(CWorld& world);
+
     // Non-UI
-    void ClearWorldAndUI(CWorld& world);
     void GetWorldsToLoad();
 };
 

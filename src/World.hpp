@@ -23,8 +23,11 @@ public:
 
     void Load(const std::string& worldFileName);
 
+    void Check();
+    void ClearMarks();
+    void Reveal();
+
 private:
-    // Tiles
     std::vector<std::vector<CTile>> m_tiles;
 
     void InitTilesFromRepr(const std::vector<std::vector<int>>& repr);

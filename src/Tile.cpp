@@ -1,12 +1,13 @@
 #include "Tile.hpp"
 
 #include <iostream>
+#include <string>
 
 #include "GlobalSettings.hpp"
 #include "SFML/Graphics/Color.hpp"
 #include "SFML/System/Vector2.hpp"
 
-CTile::CTile(int id, int colorId, sf::Color color, sf::Vector2i coords, sf::Vector2f pos) : m_id(id), m_colorId(colorId), m_color(color), m_coords(coords), m_pos(pos)
+CTile::CTile(int id, int colorId, sf::Color color, sf::Vector2i coords, sf::Vector2f pos) : m_id(id), m_colorId(colorId), m_color(color), m_coords(coords), m_pos(pos), m_mark()
 {
     // Load font
     m_font.loadFromFile(std::string(GlobalSettings::FONTS_PATH) + "arial.ttf");
@@ -25,10 +26,10 @@ void CTile::Init()
     m_tile.setFillColor(m_color);
 
     // Text
-    m_idText.setCharacterSize(16);
-    m_idText.setFillColor(sf::Color::Black);
-    m_idText.setStyle(sf::Text::Regular);
-    m_idText.setPosition(m_pos.x + (GlobalSettings::TILE_SIZE / 2) - 8, m_pos.y + (GlobalSettings::TILE_SIZE / 2 - 8));
+    m_markText.setCharacterSize(16);
+    m_markText.setFillColor(sf::Color::Black);
+    m_markText.setStyle(sf::Text::Regular);
+    m_markText.setPosition(m_pos.x + (GlobalSettings::TILE_SIZE / 2) - 8, m_pos.y + (GlobalSettings::TILE_SIZE / 2 - 8));
 }
 
 void CTile::Draw(sf::RenderWindow& window)
@@ -37,8 +38,8 @@ void CTile::Draw(sf::RenderWindow& window)
     window.draw(m_tile);
 
     // Text
-    m_idText.setFont(m_font);
-    window.draw(m_idText);
+    m_markText.setFont(m_font);
+    window.draw(m_markText);
 }
 
 bool CTile::MouseDetection(sf::Mouse::Button mouseButton, sf::Vector2i mousePos)
@@ -50,21 +51,19 @@ bool CTile::MouseDetection(sf::Mouse::Button mouseButton, sf::Vector2i mousePos)
         {
         case sf::Mouse::Button::Left:
         {
-            if (m_idText.getString().isEmpty())
+            if (isMarkEmpty())
             {
-                m_idText.setString("X");
-                m_idText.setStyle(sf::Text::Regular);
+                PlaceX();
             }
-            else if (m_idText.getString() == "X")
+            else if (isMarkX())
             {
-                m_idText.setString("Q");
-                m_idText.setStyle(sf::Text::Bold);
+                PlaceQueen();
             }
-            else if (m_idText.getString() == "Q")
+            else if (isMarkQueen())
             {
-                m_idText.setString("");
-                m_idText.setStyle(sf::Text::Regular);
+                ClearMark();
             }
+
             return true;
         }
         case sf::Mouse::Button::Right:
@@ -89,7 +88,6 @@ int CTile::GetId() const
 void CTile::SetColorId(int colorId)
 {
     m_colorId = colorId;
-    m_idText.setString(std::to_string(colorId));
 }
 
 int CTile::GetColorId() const
@@ -127,9 +125,56 @@ sf::Vector2f CTile::GetPosition() const
     return m_tile.getPosition();
 }
 
+void CTile::SetMark(const std::string &mark)
+{
+    m_mark = mark;
+    m_markText.setString(m_mark);
+}
+
+std::string CTile::GetMark() const
+{
+    return m_mark;
+}
+
 sf::Vector2f CTile::GetSize() const
 {
     return m_tile.getSize();
+}
+
+bool CTile::isMarkEmpty()
+{
+    return m_mark.empty();
+}
+
+bool CTile::isMarkX()
+{
+    return m_mark == "X";
+}
+
+bool CTile::isMarkQueen()
+{
+    return m_mark == "Q";
+}
+
+void CTile::ClearMark()
+{
+    m_mark.clear();
+    m_markText.setString(m_mark);
+    m_markText.setStyle(sf::Text::Regular);
+}
+
+void CTile::PlaceX()
+{
+    m_mark = "X";
+    m_markText.setString(m_mark);
+    m_markText.setStyle(sf::Text::Regular);
+}
+
+void CTile::PlaceQueen()
+{
+    m_mark = "Q";
+    m_markText.setString(m_mark);
+    m_markText.setStyle(sf::Text::Bold);
 }
 
 // -------

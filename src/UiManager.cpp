@@ -69,9 +69,27 @@ void CUiManager::HandleUi(sf::RenderWindow& window, CWorld& world, float fps)
     ImGui::Separator();
     // -------------------------
 
+    ShowRules();
+
+    // -------------------------
+    ImGui::Separator();
+    ImGui::Separator();
+    // -------------------------
+
     LoadWorld(world);
 
     PrintWorldRepresentation(world);
+
+    // -------------------------
+    ImGui::Separator();
+    ImGui::Separator();
+    // -------------------------
+
+    Check(world);
+    ImGui::SameLine();
+    ClearMarks(world);
+    ImGui::SameLine();
+    Reveal(world);
 }
 
 void CUiManager::End()
@@ -121,6 +139,32 @@ void CUiManager::UpdateBackgroundColor()
     }
 }
 
+void CUiManager::ShowRules()
+{
+    ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.7f, 0.2f, 0.9f, 1.0f));
+    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.6f, 0.1f, 0.8f, 1.0f));
+    if (ImGui::Button("Show rules"))
+    {
+        ImGui::OpenPopup("Rules");
+    }
+    ImGui::PopStyleColor(2);
+
+    if (ImGui::BeginPopupModal("Rules", NULL, ImGuiWindowFlags_AlwaysAutoResize))
+    {
+        ImGui::Text("How to play");
+        ImGui::Separator();
+        ImGui::Text("1. Your goal is to have exactly one Q(ueen) in each row, column and color region.");
+        ImGui::Text("2. Click once to place X and click again for Q. Use X to mark where Q cannot be placed.");
+        ImGui::Text("3. Two Q(ueens) cannot touch each other, not even diagonally.");
+        ImGui::Separator();
+        if (ImGui::Button("Close", ImVec2(120, 0)))
+        {
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::EndPopup();
+    }
+}
+
 void CUiManager::PrintWorldRepresentation(CWorld& world)
 {
     ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.4f, 0.1f, 0.6f, 1.0f));
@@ -165,15 +209,43 @@ void CUiManager::LoadWorld(CWorld& world)
     ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.6f, 0.5f, 0.0f, 1.0f));
     if (ImGui::Button("Load world (from .txt file)"))
     {
-        ClearWorldAndUI(world);
+        world.Clear();
         world.Load(m_worldsToLoad[UiSettings::WORLD_CURRENT_INDEX]);
     }
     ImGui::PopStyleColor(2);
 }
 
-void CUiManager::ClearWorldAndUI(CWorld& world)
+void CUiManager::Check(CWorld& world)
 {
-    world.Clear();
+    ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.3f, 0.8f, 0.3f, 1.0f));
+    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.1f, 0.6f, 0.3f, 1.0f));
+    if (ImGui::Button("Check"))
+    {
+        world.Check();
+    }
+    ImGui::PopStyleColor(2);
+}
+
+void CUiManager::ClearMarks(CWorld& world)
+{
+    ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.8f, 0.0f, 0.0f, 1.0f));
+    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.6f, 0.0f, 0.0f, 1.0f));
+    if (ImGui::Button("Clear"))
+    {
+        world.ClearMarks();
+    }
+    ImGui::PopStyleColor(2);
+}
+
+void CUiManager::Reveal(CWorld& world)
+{
+    ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.9f, 0.9f, 0.0f, 1.0f));
+    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.7f, 0.7f, 0.0f, 1.0f));
+    if (ImGui::Button("Reveal"))
+    {
+        world.Reveal();
+    }
+    ImGui::PopStyleColor(2);
 }
 
 void CUiManager::GetWorldsToLoad()
