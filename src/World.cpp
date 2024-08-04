@@ -22,6 +22,12 @@ void CWorld::InitTilesFromRepr(const std::vector<std::vector<int>>& repr)
 {
     Clear();
 
+    if (repr.size() > 0)
+    {
+        UiSettings::WORLD_COLS = repr.size();
+        UiSettings::WORLD_ROWS = repr[0].size();
+    }
+
     // Initialise tiles depending on representation
     std::vector<std::pair<int, sf::Color>> colorSet;
     for (int i = 0; i < repr.size(); i++)
