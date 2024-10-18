@@ -90,6 +90,23 @@ void CUiManager::HandleUi(sf::RenderWindow& window, CWorld& world, float fps)
     ClearMarks(world);
     ImGui::SameLine();
     Reveal(world);
+
+    // -------------------------
+    ImGui::Separator();
+    ImGui::Separator();
+    // -------------------------
+
+    if (world.HasLoaded())
+    {
+        if (UiSettings::LEVEL_COMPLETED)
+        {
+            ImGui::Text("Level completed, good job!");
+        }
+        else
+        {
+            ImGui::Text("I know you can solve it!");
+        }
+    }
 }
 
 void CUiManager::End()
@@ -209,6 +226,8 @@ void CUiManager::LoadWorld(CWorld& world)
     ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.6f, 0.5f, 0.0f, 1.0f));
     if (ImGui::Button("Load world (from .txt file)"))
     {
+        UiSettings::LEVEL_COMPLETED = false;
+
         world.Clear();
         world.Load(m_worldsToLoad[UiSettings::WORLD_CURRENT_INDEX]);
     }
@@ -221,7 +240,7 @@ void CUiManager::Check(CWorld& world)
     ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.1f, 0.6f, 0.3f, 1.0f));
     if (ImGui::Button("Check"))
     {
-        world.Check();
+        UiSettings::LEVEL_COMPLETED = world.Check();
     }
     ImGui::PopStyleColor(2);
 }

@@ -5,6 +5,7 @@
 
 #include "SFML/Graphics/Color.hpp"
 #include "SFML/Graphics/RectangleShape.hpp"
+#include "SFML/Graphics/Sprite.hpp"
 
 class CTile
 {
@@ -16,7 +17,12 @@ public:
     void Init();
 
     void Draw(sf::RenderWindow& window);
-    bool MouseDetection(sf::Mouse::Button mouseButton, sf::Vector2i mousePos);
+
+    bool MouseHover(sf::Vector2i mousePos);
+    bool WasBeingHovered() const { return m_isBeingHovered;}
+    void ResetHoverState();
+
+    bool MouseDetection(sf::Mouse::Button mouseButton, sf::Vector2i mousePos, const sf::Texture& transparentIconTexture, const sf::Texture& xIconTexture, const sf::Texture& queenIconTexture);
 
     void SetId(int id);
     int GetId() const;
@@ -24,8 +30,14 @@ public:
     void SetColorId(int colorId);
     int GetColorId() const;
 
-    void SetColor(const sf::Color& color);
-    sf::Color GetColor() const;
+    void SetOriginalColor(const sf::Color& color);
+    sf::Color GetOriginalColor() const;
+
+    void SetCurrentColor(const sf::Color& color);
+    sf::Color GetCurrentColor() const;
+
+    void UpdateColor(sf::Color color);
+    void ResetColor();
 
     void SetCoords(const sf::Vector2i& coords);
     sf::Vector2i GetCoords() const;
@@ -37,27 +49,35 @@ public:
     std::string GetMark() const;
 
     sf::Vector2f GetSize() const;
+    sf::FloatRect GetGlobalBounds() const;
 
     bool isMarkEmpty() const;
     bool isMarkX() const;
     bool isMarkQueen() const;
 
-    void ClearMark();
-    void PlaceX();
-    void PlaceQueen();
+    void PlaceX(const sf::Texture& xIconTexture);
+    void PlaceQueen(const sf::Texture& queenIconTexture);
+    void ClearMark(const sf::Texture& transparentIconTexture);
 
 private:
     sf::RectangleShape m_tile;
-
-    sf::Font m_font;
-    sf::Text m_markText;
+    sf::Sprite m_sprite;
 
     int m_id;
     int m_colorId;
-    sf::Color m_color;
+    sf::Color m_originalColor;
+    sf::Color m_currentColor;
     sf::Vector2i m_coords;
     sf::Vector2f m_pos;
     std::string m_mark;
+
+    // -------
+    bool m_isBeingHovered = false;
+    // -------
+
+    void SetTileIcon(const sf::Texture& texture);
+
+    void DarkenColor();
 
     // -------
 

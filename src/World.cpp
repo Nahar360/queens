@@ -1,21 +1,24 @@
 #include "World.hpp"
 
-#include <climits> // for INT_MAX
 #include <fstream>
 #include <iostream>
-#include <optional>
-#include <set>
 #include <utility>
 #include <vector>
 
 #include "GlobalSettings.hpp"
 #include "SFML/Graphics/Color.hpp"
+#include "SFML/Graphics/Rect.hpp"
+#include "SFML/System/Vector2.hpp"
 #include "Tile.hpp"
 #include "UiSettings.hpp"
 
 void CWorld::Init()
 {
-    
+    // Load textures
+    const std::string texturesPath = std::string(GlobalSettings::TEXTURES_PATH);
+    m_xIconTexture.loadFromFile(texturesPath + "x_icon.png");
+    m_queenIconTexture.loadFromFile(texturesPath + "queen_icon.png");
+    m_transparentIconTexture.loadFromFile(texturesPath + "transparent_icon.png");
 }
 
 void CWorld::InitTilesFromRepr(const std::vector<std::vector<int>>& repr)
@@ -72,9 +75,15 @@ void CWorld::InitTilesFromRepr(const std::vector<std::vector<int>>& repr)
     }
 }
 
+bool CWorld::HasLoaded()
+{
+    return m_tiles.size() > 0;
+}
+
 void CWorld::Clear()
 {
     m_tiles.clear();
+    m_numberOfDifferentRegions = 0;
 }
 
 void CWorld::Update(sf::RenderWindow& window)
@@ -94,9 +103,49 @@ void CWorld::MouseDetection(sf::Mouse::Button mouseButton, sf::Vector2i mousePos
     {
         for (int j = 0; j < m_tiles[0].size(); j++)
         {
-            if (m_tiles[i][j].MouseDetection(mouseButton, mousePos))
+            if (m_tiles[i][j].MouseDetection(mouseButton, mousePos, m_transparentIconTexture, m_xIconTexture, m_queenIconTexture))
             {
                 break;
+            }
+        }
+    }
+}
+
+bool CWorld::IsMousePosWithinWorldBounds(sf::Vector2i mousePos) const
+{
+    return m_globalBounds.contains(static_cast<float>(mousePos.x), static_cast<float>(mousePos.y));
+}
+
+void CWorld::ChangeHoveredTileColor(sf::Vector2i mousePos)
+{
+    if (IsMousePosWithinWorldBounds(mousePos))
+    {
+        for (int i = 0; i < m_tiles.size(); i++)
+        {
+            for (int j = 0; j < m_tiles[0].size(); j++)
+            {
+                if (m_tiles[i][j].MouseHover(mousePos))
+                {
+                    break;
+                }
+            }
+        }
+    }
+    // For the case that we are hovering over a tile but we go out of world bounds
+    // so the tile should reset its color
+    else
+    {
+        for (int i = 0; i < m_tiles.size(); i++)
+        {
+            for (int j = 0; j < m_tiles[0].size(); j++)
+            {
+                if (m_tiles[i][j].WasBeingHovered())
+                {
+                    m_tiles[i][j].ResetColor();
+                    m_tiles[i][j].ResetHoverState();
+
+                    break;
+                }
             }
         }
     }
@@ -139,20 +188,32 @@ void CWorld::Load(const std::string& worldFileName)
     }
 
     InitTilesFromRepr(repr);
+
+    // Save world's coordinates
+    if (HasLoaded())
+    {
+        const CTile firstTile = m_tiles[0][0];
+        const sf::FloatRect firstTileGlobalBounds = firstTile.GetGlobalBounds();
+        const sf::Vector2f topLeftCoord = {firstTileGlobalBounds.top, firstTileGlobalBounds.left};
+        const sf::Vector2f sizeRect = sf::Vector2f(GlobalSettings::TILE_SIZE * m_tiles.size(), GlobalSettings::TILE_SIZE * m_tiles.size());
+        m_globalBounds = sf::FloatRect(topLeftCoord, sizeRect);
+    }
 }
 
-void CWorld::Check()
+bool CWorld::Check()
 {
     // 1 and only 1 Q in each row, column and colour region
-    CheckRows();
-    CheckColumns();
-    CheckRegions();
+    const bool rowsCheckSuccessful = CheckRows();
+    const bool columnsCheckSuccessful = CheckColumns();
+    const bool regionsCheckSuccessful = CheckRegions();
 
     // 2 Qs cannot touch each other, not even diagonally
-    CheckProximities();
+    const bool proximitiesCheckSuccessful = CheckProximities();
+
+    return rowsCheckSuccessful && columnsCheckSuccessful && regionsCheckSuccessful && proximitiesCheckSuccessful;
 }
 
-void CWorld::CheckRows()
+bool CWorld::CheckRows()
 {
     for (int i = 0; i < m_tiles.size(); i++)
     {
@@ -160,11 +221,15 @@ void CWorld::CheckRows()
         if (numberOfQueensInRow != 1)
         {
             std::cout << "Not 1 queen in row " << i + 1 << std::endl;
+
+            return false;
         }
     }
+
+    return true;
 }
 
-void CWorld::CheckColumns()
+bool CWorld::CheckColumns()
 {
     for (int i = 0; i < m_tiles.size(); i++)
     {
@@ -178,11 +243,15 @@ void CWorld::CheckColumns()
         if (numberOfQueensInColumn != 1)
         {
             std::cout << "Not 1 queen in column " << i + 1 << std::endl;
+
+            return false;
         }
     }
+
+    return true;
 }
 
-void CWorld::CheckRegions()
+bool CWorld::CheckRegions()
 {
     for (int i = 1; i < m_numberOfDifferentRegions + 1; i++) // because regions start from 1
     {
@@ -202,11 +271,15 @@ void CWorld::CheckRegions()
         if (numberOfQueensInRegion != 1)
         {
             std::cout << "Not 1 queen in region " << i << std::endl;
+
+            return false;
         }
     }
+
+    return true;
 }
 
-void CWorld::CheckProximities()
+bool CWorld::CheckProximities()
 {
     for (int i = 0; i < m_tiles.size(); i++)
     {
@@ -225,11 +298,15 @@ void CWorld::CheckProximities()
                 }
                 if (numberOfQueensInProximity > 0)
                 {
-                    std::cout << "Other queens in proximity of Queen " << m_tiles[i][j].GetId() << std::endl;
+                    std::cout << "Other queens in proximity of Queen in tile " << m_tiles[i][j].GetId() << std::endl;
+
+                    return false;
                 }
             }
         }
     }
+
+    return true;
 }
 
 std::vector<bool> CWorld::GetNeighboursOfTile(const CTile& tile)
@@ -301,29 +378,12 @@ void CWorld::ClearMarks()
     {
         for (int j = 0; j < m_tiles[0].size(); j++)
         {
-            m_tiles[i][j].ClearMark();
+            m_tiles[i][j].ClearMark(m_transparentIconTexture);
         }
     }
 }
 
 void CWorld::Reveal()
 {
-    // Fill the board with X
-    for (int i = 0; i < m_tiles.size(); i++)
-    {
-        for (int j = 0; j < m_tiles[0].size(); j++)
-        {
-            m_tiles[i][j].PlaceX();
-        }
-    }
-
-    // Place Q in their right tiles
-    m_tiles[0][5].PlaceQueen();
-    m_tiles[1][7].PlaceQueen();
-    m_tiles[2][4].PlaceQueen();
-    m_tiles[3][1].PlaceQueen();
-    m_tiles[4][3].PlaceQueen();
-    m_tiles[5][6].PlaceQueen();
-    m_tiles[6][2].PlaceQueen();
-    m_tiles[7][0].PlaceQueen();
+    // TODO: Implement
 }

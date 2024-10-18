@@ -22,6 +22,7 @@ private:
 
     bool m_mouseHasBeenPressed = false;
 
+    void CheckMouseHover();
     void CheckEvents();
 };
 

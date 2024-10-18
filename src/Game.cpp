@@ -25,6 +25,8 @@ void CGame::Run()
         const float fps = 1.0f / (currentTime.asSeconds() - previousTime.asSeconds());
         previousTime = currentTime;
 
+        CheckMouseHover();
+
         CheckEvents();
 
         m_uiManager.Run(m_window, m_world, fps);
@@ -39,6 +41,16 @@ void CGame::Run()
     }
 
     m_uiManager.Shutdown();
+}
+
+void CGame::CheckMouseHover()
+{
+    // We are only interested on hover events if the world has been loaded
+    if (m_world.HasLoaded())
+    {
+        const sf::Vector2i mousePos = sf::Mouse::getPosition(m_window);
+        m_world.ChangeHoveredTileColor(mousePos);
+    }
 }
 
 void CGame::CheckEvents()

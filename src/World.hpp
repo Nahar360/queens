@@ -1,10 +1,10 @@
 #ifndef WORLD_HPP
 #define WORLD_HPP
 
-#include <optional>
 #include <string>
 #include <vector>
 
+#include "SFML/Graphics/Rect.hpp"
 #include "Tile.hpp"
 
 class CWorld
@@ -15,15 +15,20 @@ public:
 
     void Init();
 
+    bool HasLoaded();
+
     void Clear();
     void Update(sf::RenderWindow& window);
     void MouseDetection(sf::Mouse::Button mouseButton, sf::Vector2i mousePos);
+
+    bool IsMousePosWithinWorldBounds(sf::Vector2i mousePos) const;
+    void ChangeHoveredTileColor(sf::Vector2i mousePos);
 
     void PrintRepresentation();
 
     void Load(const std::string& worldFileName);
 
-    void Check();
+    bool Check();
     void ClearMarks();
     void Reveal();
 
@@ -31,13 +36,20 @@ private:
     std::vector<std::vector<CTile>> m_tiles;
     int m_numberOfDifferentRegions = 0;
 
+    sf::FloatRect m_globalBounds;
+
+    // Textures
+    sf::Texture m_xIconTexture;
+    sf::Texture m_queenIconTexture;
+    sf::Texture m_transparentIconTexture;
+
     void InitTilesFromRepr(const std::vector<std::vector<int>>& repr);
 
     // 'Check' helper functions
-    void CheckRows();
-    void CheckColumns();
-    void CheckRegions();
-    void CheckProximities();
+    bool CheckRows();
+    bool CheckColumns();
+    bool CheckRegions();
+    bool CheckProximities();
 
     // 'Proximity' helper functions
     std::vector<bool> GetNeighboursOfTile(const CTile& tile);
