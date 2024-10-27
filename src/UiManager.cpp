@@ -4,13 +4,14 @@
 #include <filesystem>
 #include <string>
 
+#include "imgui-SFML.h"
+#include "imgui.h"
+
 #include <SFML/Graphics.hpp>
 #include <SFML/System.hpp>
 #include <SFML/Window.hpp>
 
 #include "GlobalSettings.hpp"
-#include "imgui-SFML.h"
-#include "imgui.h"
 #include "UiSettings.hpp"
 
 

@@ -2,10 +2,16 @@
 #define TILE_HPP
 
 #include <SFML/Graphics.hpp>
-
 #include "SFML/Graphics/Color.hpp"
 #include "SFML/Graphics/RectangleShape.hpp"
 #include "SFML/Graphics/Sprite.hpp"
+
+enum class Mark
+{
+    EMPTY,
+    X,
+    QUEEN
+};
 
 class CTile
 {
@@ -22,7 +28,7 @@ public:
     bool WasBeingHovered() const { return m_isBeingHovered;}
     void ResetHoverState();
 
-    bool MouseDetection(sf::Mouse::Button mouseButton, sf::Vector2i mousePos, const sf::Texture& transparentIconTexture, const sf::Texture& xIconTexture, const sf::Texture& queenIconTexture);
+    bool MouseDetection(sf::Mouse::Button mouseButton, sf::Vector2i mousePos);
 
     void SetId(int id);
     int GetId() const;
@@ -45,8 +51,8 @@ public:
     void SetPosition(const sf::Vector2f& pos);
     sf::Vector2f GetPosition() const;
 
-    void SetMark(const std::string& mark);
-    std::string GetMark() const;
+    void SetMark(Mark mark);
+    Mark GetMark() const;
 
     sf::Vector2f GetSize() const;
     sf::FloatRect GetGlobalBounds() const;
@@ -55,9 +61,9 @@ public:
     bool isMarkX() const;
     bool isMarkQueen() const;
 
-    void PlaceX(const sf::Texture& xIconTexture);
-    void PlaceQueen(const sf::Texture& queenIconTexture);
-    void ClearMark(const sf::Texture& transparentIconTexture);
+    void PlaceX();
+    void PlaceQueen();
+    void ClearMark();
 
 private:
     sf::RectangleShape m_tile;
@@ -69,13 +75,13 @@ private:
     sf::Color m_currentColor;
     sf::Vector2i m_coords;
     sf::Vector2f m_pos;
-    std::string m_mark;
+    Mark m_mark;
 
     // -------
     bool m_isBeingHovered = false;
     // -------
 
-    void SetTileIcon(const sf::Texture& texture);
+    void SetSprite(const sf::Texture& texture, const float offset = 0.0f, const sf::Vector2f& scale = {1.0f, 1.0f});
 
     void DarkenColor();
 

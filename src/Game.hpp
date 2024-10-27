@@ -12,7 +12,9 @@ public:
     CGame();
     ~CGame() = default;
 
+    void Init();
     void Run();
+    void Shutdown();
 
 private:
     sf::RenderWindow m_window;

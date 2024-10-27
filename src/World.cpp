@@ -5,20 +5,18 @@
 #include <utility>
 #include <vector>
 
-#include "GlobalSettings.hpp"
 #include "SFML/Graphics/Color.hpp"
 #include "SFML/Graphics/Rect.hpp"
 #include "SFML/System/Vector2.hpp"
+
+#include "GlobalSettings.hpp"
 #include "Tile.hpp"
 #include "UiSettings.hpp"
 
 void CWorld::Init()
 {
-    // Load textures
-    const std::string texturesPath = std::string(GlobalSettings::TEXTURES_PATH);
-    m_xIconTexture.loadFromFile(texturesPath + "x_icon.png");
-    m_queenIconTexture.loadFromFile(texturesPath + "queen_icon.png");
-    m_transparentIconTexture.loadFromFile(texturesPath + "transparent_icon.png");
+    // Load a world (the first one) by default
+    Load("world_77.txt");
 }
 
 void CWorld::InitTilesFromRepr(const std::vector<std::vector<int>>& repr)
@@ -103,7 +101,7 @@ void CWorld::MouseDetection(sf::Mouse::Button mouseButton, sf::Vector2i mousePos
     {
         for (int j = 0; j < m_tiles[0].size(); j++)
         {
-            if (m_tiles[i][j].MouseDetection(mouseButton, mousePos, m_transparentIconTexture, m_xIconTexture, m_queenIconTexture))
+            if (m_tiles[i][j].MouseDetection(mouseButton, mousePos))
             {
                 break;
             }
@@ -378,7 +376,7 @@ void CWorld::ClearMarks()
     {
         for (int j = 0; j < m_tiles[0].size(); j++)
         {
-            m_tiles[i][j].ClearMark(m_transparentIconTexture);
+            m_tiles[i][j].ClearMark();
         }
     }
 }

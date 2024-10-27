@@ -1,17 +1,19 @@
 add_executable(queens
+  main.cpp
+
   Game.cpp
   Game.hpp
   GlobalSettings.cpp
   GlobalSettings.hpp
+  ResourceManager.hpp
+  Tile.cpp
+  Tile.hpp
   UiManager.cpp
   UiManager.hpp
   UiSettings.cpp
   UiSettings.hpp
-  Tile.cpp
-  Tile.hpp
   World.hpp
   World.cpp
-  main.cpp
 )
 
 target_link_libraries(queens PRIVATE ImGui-SFML::ImGui-SFML)

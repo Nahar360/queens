@@ -5,6 +5,7 @@
 #include <vector>
 
 #include "SFML/Graphics/Rect.hpp"
+
 #include "Tile.hpp"
 
 class CWorld
@@ -37,11 +38,6 @@ private:
     int m_numberOfDifferentRegions = 0;
 
     sf::FloatRect m_globalBounds;
-
-    // Textures
-    sf::Texture m_xIconTexture;
-    sf::Texture m_queenIconTexture;
-    sf::Texture m_transparentIconTexture;
 
     void InitTilesFromRepr(const std::vector<std::vector<int>>& repr);
 

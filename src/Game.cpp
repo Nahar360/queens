@@ -1,6 +1,7 @@
 #include "Game.hpp"
 
 #include "GlobalSettings.hpp"
+#include "ResourceManager.hpp"
 
 CGame::CGame()
     : m_window(sf::VideoMode(GlobalSettings::WINDOW_WIDTH, GlobalSettings::WINDOW_HEIGHT), GlobalSettings::WINDOW_TITLE)
@@ -8,12 +9,16 @@ CGame::CGame()
     srand(time(NULL));
 }
 
-void CGame::Run()
+void CGame::Init()
 {
-    // Initialisation
+    ResourceManager::getInstance().Load();
+
     m_uiManager.Init(m_window);
     m_world.Init();
+}
 
+void CGame::Run()
+{
     sf::Clock clock = sf::Clock();
     sf::Time previousTime = clock.getElapsedTime();
     sf::Time currentTime;
@@ -39,7 +44,10 @@ void CGame::Run()
 
         m_window.display();
     }
+}
 
+void CGame::Shutdown()
+{
     m_uiManager.Shutdown();
 }
 
