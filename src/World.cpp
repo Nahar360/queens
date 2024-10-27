@@ -2,7 +2,7 @@
 
 #include <fstream>
 #include <iostream>
-#include <utility>
+#include <unordered_map>
 #include <vector>
 
 #include "SFML/Graphics/Color.hpp"
@@ -13,10 +13,26 @@
 #include "Tile.hpp"
 #include "UiSettings.hpp"
 
-void CWorld::Init()
+// Define and initialize the REGIONS_COLORS static member variable (https://loading.io/color/feature/Set3-10/)
+// clang-format off
+const std::vector<sf::Color> CWorld::REGIONS_COLORS = {
+    sf::Color(141, 211, 199), // Turquoise
+    sf::Color(255, 255, 179), // Light yellow
+    sf::Color(190, 186, 218), // Lavender
+    sf::Color(251, 128, 114), // Salmon
+    sf::Color(128, 177, 211), // Sky blue
+    sf::Color(253, 180, 98),  // Light orange
+    sf::Color(179, 222, 105), // Light green
+    sf::Color(252, 205, 229), // Light pink
+    sf::Color(217, 217, 217), // Light grey
+    sf::Color(188, 128, 189)  // Purple
+};
+// clang-format on
+
+void CWorld::Init(const std::string& worldFileName)
 {
-    // Load a world (the first one) by default
-    Load("world_77.txt");
+    // Load a world (the first one in the already populated dropdown list) by default
+    Load(worldFileName);
 }
 
 void CWorld::InitTilesFromRepr(const std::vector<std::vector<int>>& repr)
@@ -30,7 +46,7 @@ void CWorld::InitTilesFromRepr(const std::vector<std::vector<int>>& repr)
     }
 
     // Initialise tiles depending on representation
-    std::vector<std::pair<int, sf::Color>> colorSet;
+    std::unordered_map<int, sf::Color> colorSet;
     for (int i = 0; i < repr.size(); i++)
     {
         std::vector<CTile> tiles_row;
@@ -40,25 +56,8 @@ void CWorld::InitTilesFromRepr(const std::vector<std::vector<int>>& repr)
             const int id = (i * numColumns) + j;
 
             const int colorId = repr[i][j];
-            sf::Color color;
-            bool found = false;
-            for (const auto& elem : colorSet)
-            {
-                if (colorId == elem.first)
-                {
-                    color = elem.second;
-                    found = true;
-                }
-            }
-            if (!found)
-            {
-                const int r = rand() % 255;
-                const int b = rand() % 255;
-                const int g = rand() % 255;
-                color = sf::Color(r, g, b);
-                m_numberOfDifferentRegions++;
-            }
-            colorSet.push_back(std::make_pair(colorId, color));
+            const sf::Color color = CWorld::REGIONS_COLORS[colorId % CWorld::REGIONS_COLORS.size()];
+            colorSet[colorId] = color; // add color to the set, associated to its colorId
             
             const sf::Vector2i coords(i, j);
             const sf::Vector2f pos((j + 1) * GlobalSettings::TILE_SIZE, (i + 1) * GlobalSettings::TILE_SIZE);
@@ -71,6 +70,9 @@ void CWorld::InitTilesFromRepr(const std::vector<std::vector<int>>& repr)
 
         m_tiles.push_back(tiles_row);
     }
+
+    // The number of regions is equal to the number of different colors
+    m_numRegions = colorSet.size();
 }
 
 bool CWorld::HasLoaded()
@@ -80,8 +82,11 @@ bool CWorld::HasLoaded()
 
 void CWorld::Clear()
 {
+    UiSettings::LEVEL_COMPLETED_TIME = INT_MAX;
+
     m_tiles.clear();
-    m_numberOfDifferentRegions = 0;
+    m_numRegions = 0;
+    m_clock.restart();
 }
 
 void CWorld::Update(sf::RenderWindow& window)
@@ -103,6 +108,14 @@ void CWorld::MouseDetection(sf::Mouse::Button mouseButton, sf::Vector2i mousePos
         {
             if (m_tiles[i][j].MouseDetection(mouseButton, mousePos))
             {
+                // Check if the level has been completed after each move
+                const bool levelCompleted = Check();
+                if (levelCompleted)
+                {
+                    // If the level has been completed, we save the time it took to complete it
+                    UiSettings::LEVEL_COMPLETED_TIME = static_cast<int>(m_clock.getElapsedTime().asSeconds());
+                }
+
                 break;
             }
         }
@@ -216,9 +229,16 @@ bool CWorld::CheckRows()
     for (int i = 0; i < m_tiles.size(); i++)
     {
         const int numberOfQueensInRow = GetNumberOfQueensInVector(m_tiles[i]);
-        if (numberOfQueensInRow != 1)
+        const int rowNumber = i + 1;
+        if (numberOfQueensInRow == 0)
         {
-            std::cout << "Not 1 queen in row " << i + 1 << std::endl;
+            std::cout << "No queen in row " << rowNumber << std::endl;
+
+            return false;
+        }
+        else if (numberOfQueensInRow > 1)
+        {
+            std::cout << "More than 1 queen in row " << rowNumber << std::endl;
 
             return false;
         }
@@ -238,9 +258,16 @@ bool CWorld::CheckColumns()
         }
 
         const int numberOfQueensInColumn = GetNumberOfQueensInVector(column);
-        if (numberOfQueensInColumn != 1)
+        const int columnNumber = i + 1;
+        if (numberOfQueensInColumn == 0)
         {
-            std::cout << "Not 1 queen in column " << i + 1 << std::endl;
+            std::cout << "No queen in column " << columnNumber << std::endl;
+
+            return false;
+        }
+        else if (numberOfQueensInColumn > 1)
+        {
+            std::cout << "More than 1 queen in column " << columnNumber << std::endl;
 
             return false;
         }
@@ -251,7 +278,7 @@ bool CWorld::CheckColumns()
 
 bool CWorld::CheckRegions()
 {
-    for (int i = 1; i < m_numberOfDifferentRegions + 1; i++) // because regions start from 1
+    for (int i = 0; i < m_numRegions; i++)
     {
         std::vector<CTile> region;
         for (int j = 0; j < m_tiles.size(); j++)
@@ -266,9 +293,16 @@ bool CWorld::CheckRegions()
         }
 
         const int numberOfQueensInRegion = GetNumberOfQueensInVector(region);
-        if (numberOfQueensInRegion != 1)
+        const int regionNumber = i + 1;
+        if (numberOfQueensInRegion == 0)
         {
-            std::cout << "Not 1 queen in region " << i << std::endl;
+            std::cout << "No queen in region " << regionNumber << std::endl; // TODO: Add region colour
+
+            return false;
+        }
+        else if (numberOfQueensInRegion > 1)
+        {
+            std::cout << "More than 1 queen in region " << regionNumber << std::endl; // TODO: Add region colour
 
             return false;
         }
@@ -370,7 +404,7 @@ int CWorld::GetNumberOfQueensInVector(const std::vector<CTile>& v) const
     return numberOfQueens;
 }
 
-void CWorld::ClearMarks()
+void CWorld::Reset()
 {
     for (int i = 0; i < m_tiles.size(); i++)
     {
@@ -379,9 +413,4 @@ void CWorld::ClearMarks()
             m_tiles[i][j].ClearMark();
         }
     }
-}
-
-void CWorld::Reveal()
-{
-    // TODO: Implement
 }

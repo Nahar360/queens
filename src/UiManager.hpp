@@ -1,6 +1,8 @@
 #ifndef UI_MANAGER_HPP
 #define UI_MANAGER_HPP
 
+#include <vector>
+
 #include <SFML/Graphics.hpp>
 
 #include "World.hpp"
@@ -13,6 +15,8 @@ public:
 
     void Init(sf::RenderWindow& window);
     void Shutdown();
+
+    std::vector<std::string> getWorldsToLoad() const { return m_worldsToLoad; }
 
     void ProcessEvent(sf::Event event);
 
@@ -39,13 +43,14 @@ private:
 
     void ShowRules();
 
-    void PrintWorldRepresentation(CWorld& world);
+    void DebugUi(CWorld& world);
 
     void LoadWorld(CWorld& world);
 
-    void Check(CWorld& world);
-    void ClearMarks(CWorld& world);
-    void Reveal(CWorld& world);
+    void ResetLevel(CWorld& world);
+
+    void ShowElapsedTime(CWorld& world);
+    void ShowLevelCompleted();
 
     // Non-UI
     void GetWorldsToLoad();

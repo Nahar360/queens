@@ -14,7 +14,10 @@ void CGame::Init()
     ResourceManager::getInstance().Load();
 
     m_uiManager.Init(m_window);
-    m_world.Init();
+
+    // Load the first world
+    const std::vector<std::string> worldsToLoad = m_uiManager.getWorldsToLoad();
+    m_world.Init(worldsToLoad[0]);
 }
 
 void CGame::Run()

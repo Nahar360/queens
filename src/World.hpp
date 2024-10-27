@@ -4,6 +4,7 @@
 #include <string>
 #include <vector>
 
+#include "SFML/Graphics/Color.hpp"
 #include "SFML/Graphics/Rect.hpp"
 
 #include "Tile.hpp"
@@ -14,7 +15,7 @@ public:
     CWorld() = default;
     ~CWorld() = default;
 
-    void Init();
+    void Init(const std::string& worldFileName);
 
     bool HasLoaded();
 
@@ -30,14 +31,21 @@ public:
     void Load(const std::string& worldFileName);
 
     bool Check();
-    void ClearMarks();
-    void Reveal();
+    void Reset();
+
+    // Static variables
+    static const std::vector<sf::Color> REGIONS_COLORS;
+
+    // Getters
+    sf::Clock GetClock() const { return m_clock; }
 
 private:
     std::vector<std::vector<CTile>> m_tiles;
-    int m_numberOfDifferentRegions = 0;
+    int m_numRegions = 0; // Number of different regions
 
     sf::FloatRect m_globalBounds;
+
+    sf::Clock m_clock;
 
     void InitTilesFromRepr(const std::vector<std::vector<int>>& repr);
 

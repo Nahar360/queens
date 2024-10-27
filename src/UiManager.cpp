@@ -1,9 +1,11 @@
 #include "UiManager.hpp"
 
 #include <algorithm> // for std::sort
+#include <climits>
 #include <filesystem>
 #include <string>
 
+#include "World.hpp"
 #include "imgui-SFML.h"
 #include "imgui.h"
 
@@ -13,7 +15,6 @@
 
 #include "GlobalSettings.hpp"
 #include "UiSettings.hpp"
-
 
 void CUiManager::Init(sf::RenderWindow& window)
 {
@@ -70,7 +71,7 @@ void CUiManager::HandleUi(sf::RenderWindow& window, CWorld& world, float fps)
     ImGui::Separator();
     // -------------------------
 
-    ShowRules();
+    DebugUi(world);
 
     // -------------------------
     ImGui::Separator();
@@ -79,33 +80,32 @@ void CUiManager::HandleUi(sf::RenderWindow& window, CWorld& world, float fps)
 
     LoadWorld(world);
 
-    PrintWorldRepresentation(world);
-
     // -------------------------
     ImGui::Separator();
     ImGui::Separator();
     // -------------------------
 
-    Check(world);
+    ShowRules();
     ImGui::SameLine();
-    ClearMarks(world);
-    ImGui::SameLine();
-    Reveal(world);
+    ResetLevel(world);
 
     // -------------------------
     ImGui::Separator();
     ImGui::Separator();
     // -------------------------
 
+    // The following can be considered "in game" UI
     if (world.HasLoaded())
     {
-        if (UiSettings::LEVEL_COMPLETED)
+        // If the level is still in progress, we show the time elapsed
+        if (UiSettings::LEVEL_COMPLETED_TIME == INT_MAX)
         {
-            ImGui::Text("Level completed, good job!");
+            ShowElapsedTime(world);
         }
+        // Else, we show the time it took to complete it
         else
         {
-            ImGui::Text("I know you can solve it!");
+            ShowLevelCompleted();
         }
     }
 }
@@ -183,15 +183,23 @@ void CUiManager::ShowRules()
     }
 }
 
-void CUiManager::PrintWorldRepresentation(CWorld& world)
+void CUiManager::DebugUi(CWorld& world)
 {
-    ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.4f, 0.1f, 0.6f, 1.0f));
-    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.4f, 0.3f, 0.6f, 1.0f));
-    if (ImGui::Button("Print world to console"))
+    ImGui::TextColored(ImVec4(1, 1, 0, 1), "Debug");
+    
+    ImGui::Checkbox("Show debug options", &UiSettings::SHOW_DEBUG_OPTIONS);
+
+    if (UiSettings::SHOW_DEBUG_OPTIONS)
     {
-        world.PrintRepresentation();
+        // Print world to console
+        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.4f, 0.1f, 0.6f, 1.0f));
+        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.4f, 0.3f, 0.6f, 1.0f));
+        if (ImGui::Button("Print world to console"))
+        {
+            world.PrintRepresentation();
+        }
+        ImGui::PopStyleColor(2);
     }
-    ImGui::PopStyleColor(2);
 }
 
 void CUiManager::LoadWorld(CWorld& world)
@@ -213,6 +221,10 @@ void CUiManager::LoadWorld(CWorld& world)
             if (ImGui::Selectable(m_worldsToLoad[n].data(), is_selected))
             {
                 UiSettings::WORLD_CURRENT_INDEX = n;
+                UiSettings::LEVEL_COMPLETED_TIME = INT_MAX; // Reset level completed time
+
+                world.Clear();
+                world.Load(m_worldsToLoad[UiSettings::WORLD_CURRENT_INDEX]);
             }
 
             if (is_selected)
@@ -222,50 +234,39 @@ void CUiManager::LoadWorld(CWorld& world)
         }
         ImGui::EndCombo();
     }
-
-    ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.6f, 0.3f, 0.0f, 1.0f));
-    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.6f, 0.5f, 0.0f, 1.0f));
-    if (ImGui::Button("Load world (from .txt file)"))
-    {
-        UiSettings::LEVEL_COMPLETED = false;
-
-        world.Clear();
-        world.Load(m_worldsToLoad[UiSettings::WORLD_CURRENT_INDEX]);
-    }
-    ImGui::PopStyleColor(2);
 }
 
-void CUiManager::Check(CWorld& world)
-{
-    ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.3f, 0.8f, 0.3f, 1.0f));
-    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.1f, 0.6f, 0.3f, 1.0f));
-    if (ImGui::Button("Check"))
-    {
-        UiSettings::LEVEL_COMPLETED = world.Check();
-    }
-    ImGui::PopStyleColor(2);
-}
-
-void CUiManager::ClearMarks(CWorld& world)
+void CUiManager::ResetLevel(CWorld& world)
 {
     ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.8f, 0.0f, 0.0f, 1.0f));
     ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.6f, 0.0f, 0.0f, 1.0f));
-    if (ImGui::Button("Clear"))
+    if (ImGui::Button("Reset"))
     {
-        world.ClearMarks();
+        world.Reset();
     }
     ImGui::PopStyleColor(2);
 }
 
-void CUiManager::Reveal(CWorld& world)
+void CUiManager::ShowElapsedTime(CWorld& world)
 {
-    ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.9f, 0.9f, 0.0f, 1.0f));
-    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.7f, 0.7f, 0.0f, 1.0f));
-    if (ImGui::Button("Reveal"))
+    const int timeElapsed = static_cast<int>(world.GetClock().getElapsedTime().asSeconds());
+    ImGui::Text("Time elapsed: %d seconds", timeElapsed);
+}
+
+void CUiManager::ShowLevelCompleted()
+{
+    ImGui::OpenPopup("Level completed");
+
+    if (ImGui::BeginPopupModal("Level completed", NULL, ImGuiWindowFlags_AlwaysAutoResize))
     {
-        world.Reveal();
+        ImGui::Text("Good job! You completed the level in %d seconds!", UiSettings::LEVEL_COMPLETED_TIME);
+        ImGui::Separator();
+        if (ImGui::Button("Close", ImVec2(120, 0)))
+        {
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::EndPopup();
     }
-    ImGui::PopStyleColor(2);
 }
 
 void CUiManager::GetWorldsToLoad()
