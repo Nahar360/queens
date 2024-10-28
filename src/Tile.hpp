@@ -13,12 +13,12 @@ enum class Mark
     QUEEN
 };
 
-class CTile
+class Tile
 {
 public:
-    CTile(int id, int colorId, sf::Color color, sf::Vector2i coords, sf::Vector2f pos);
+    Tile(int id, int colorId, sf::Color color, sf::Vector2i coords, sf::Vector2f pos);
 
-    ~CTile() = default;
+    ~Tile() = default;
 
     void Init();
 
@@ -87,7 +87,7 @@ private:
 
     // -------
 
-    friend std::ostream& operator<<(std::ostream& os, const CTile& tile);
+    friend std::ostream& operator<<(std::ostream& os, const Tile& tile);
 };
 
 #endif // TILE_HPP

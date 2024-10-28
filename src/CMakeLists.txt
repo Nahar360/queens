@@ -5,6 +5,8 @@ add_executable(queens
   Game.hpp
   GlobalSettings.cpp
   GlobalSettings.hpp
+  Level.hpp
+  Level.cpp
   ResourceManager.hpp
   Tile.cpp
   Tile.hpp
@@ -12,8 +14,6 @@ add_executable(queens
   UiManager.hpp
   UiSettings.cpp
   UiSettings.hpp
-  World.hpp
-  World.cpp
 )
 
 target_link_libraries(queens PRIVATE ImGui-SFML::ImGui-SFML)

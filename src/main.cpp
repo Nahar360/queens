@@ -2,7 +2,7 @@
 
 int main()
 {
-    CGame game;
+    Game game;
     game.Init();
     game.Run();
     game.Shutdown();

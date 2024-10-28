@@ -5,7 +5,6 @@
 #include <filesystem>
 #include <string>
 
-#include "World.hpp"
 #include "imgui-SFML.h"
 #include "imgui.h"
 
@@ -14,47 +13,48 @@
 #include <SFML/Window.hpp>
 
 #include "GlobalSettings.hpp"
+#include "Level.hpp"
 #include "UiSettings.hpp"
 
-void CUiManager::Init(sf::RenderWindow& window)
+void UiManager::Init(sf::RenderWindow& window)
 {
     ImGui::SFML::Init(window);
 
-    GetWorldsToLoad();
+    GetLevelsToLoad();
 }
 
-void CUiManager::Shutdown()
+void UiManager::Shutdown()
 {
     ImGui::SFML::Shutdown();
 }
 
-void CUiManager::ProcessEvent(sf::Event event)
+void UiManager::ProcessEvent(sf::Event event)
 {
     ImGui::SFML::ProcessEvent(event);
 }
 
-void CUiManager::Update(sf::RenderWindow& window)
+void UiManager::Update(sf::RenderWindow& window)
 {
     ImGui::SFML::Update(window, m_deltaClock.restart());
 }
 
-void CUiManager::Begin()
+void UiManager::Begin()
 {
     ImGui::Begin("Menu");
 }
 
-void CUiManager::Run(sf::RenderWindow& window, CWorld& world, float fps)
+void UiManager::Run(sf::RenderWindow& window, Level& level, float fps)
 {
     Update(window);
 
     Begin();
 
-    HandleUi(window, world, fps);
+    HandleUi(window, level, fps);
 
     End();
 }
 
-void CUiManager::HandleUi(sf::RenderWindow& window, CWorld& world, float fps)
+void UiManager::HandleUi(sf::RenderWindow& window, Level& level, float fps)
 {
     ImGui::TextColored(ImVec4(1, 1, 0, 1), "General settings");
 
@@ -71,14 +71,14 @@ void CUiManager::HandleUi(sf::RenderWindow& window, CWorld& world, float fps)
     ImGui::Separator();
     // -------------------------
 
-    DebugUi(world);
+    DebugUi(level);
 
     // -------------------------
     ImGui::Separator();
     ImGui::Separator();
     // -------------------------
 
-    LoadWorld(world);
+    LoadLevel(level);
 
     // -------------------------
     ImGui::Separator();
@@ -87,7 +87,9 @@ void CUiManager::HandleUi(sf::RenderWindow& window, CWorld& world, float fps)
 
     ShowRules();
     ImGui::SameLine();
-    ResetLevel(world);
+    ResetLevel(level);
+    ImGui::SameLine();
+    SolveLevel(level);
 
     // -------------------------
     ImGui::Separator();
@@ -95,12 +97,12 @@ void CUiManager::HandleUi(sf::RenderWindow& window, CWorld& world, float fps)
     // -------------------------
 
     // The following can be considered "in game" UI
-    if (world.HasLoaded())
+    if (level.HasLoaded())
     {
         // If the level is still in progress, we show the time elapsed
         if (UiSettings::LEVEL_COMPLETED_TIME == INT_MAX)
         {
-            ShowElapsedTime(world);
+            ShowElapsedTime(level);
         }
         // Else, we show the time it took to complete it
         else
@@ -110,17 +112,17 @@ void CUiManager::HandleUi(sf::RenderWindow& window, CWorld& world, float fps)
     }
 }
 
-void CUiManager::End()
+void UiManager::End()
 {
     ImGui::End();
 }
 
-void CUiManager::Render(sf::RenderWindow& window)
+void UiManager::Render(sf::RenderWindow& window)
 {
     ImGui::SFML::Render(window);
 }
 
-void CUiManager::UpdateWindowTitle(sf::RenderWindow& window)
+void UiManager::UpdateWindowTitle(sf::RenderWindow& window)
 {
     if (ImGui::InputText("Window title", GlobalSettings::WINDOW_TITLE, 255))
     {
@@ -128,12 +130,12 @@ void CUiManager::UpdateWindowTitle(sf::RenderWindow& window)
     }
 }
 
-void CUiManager::ShowFPS(float fps)
+void UiManager::ShowFPS(float fps)
 {
     ImGui::Text("FPS: %f", fps);
 }
 
-void CUiManager::UpdateMousePosition(sf::RenderWindow& window)
+void UiManager::UpdateMousePosition(sf::RenderWindow& window)
 {
     sf::Vector2i mousePos = sf::Mouse::getPosition(window);
     if (mousePos.x >= 0 && mousePos.x <= GlobalSettings::WINDOW_WIDTH && mousePos.y >= 0 &&
@@ -147,7 +149,7 @@ void CUiManager::UpdateMousePosition(sf::RenderWindow& window)
     }
 }
 
-void CUiManager::UpdateBackgroundColor()
+void UiManager::UpdateBackgroundColor()
 {
     if (ImGui::ColorEdit3("Background color", GlobalSettings::BACKGROUND_COLOR_INPUT))
     {
@@ -157,7 +159,7 @@ void CUiManager::UpdateBackgroundColor()
     }
 }
 
-void CUiManager::ShowRules()
+void UiManager::ShowRules()
 {
     ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.7f, 0.2f, 0.9f, 1.0f));
     ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.6f, 0.1f, 0.8f, 1.0f));
@@ -183,7 +185,7 @@ void CUiManager::ShowRules()
     }
 }
 
-void CUiManager::DebugUi(CWorld& world)
+void UiManager::DebugUi(Level& level)
 {
     ImGui::TextColored(ImVec4(1, 1, 0, 1), "Debug");
     
@@ -191,40 +193,40 @@ void CUiManager::DebugUi(CWorld& world)
 
     if (UiSettings::SHOW_DEBUG_OPTIONS)
     {
-        // Print world to console
+        // Print level to console
         ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.4f, 0.1f, 0.6f, 1.0f));
         ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.4f, 0.3f, 0.6f, 1.0f));
-        if (ImGui::Button("Print world to console"))
+        if (ImGui::Button("Print level to console"))
         {
-            world.PrintRepresentation();
+            level.PrintRepresentation();
         }
         ImGui::PopStyleColor(2);
     }
 }
 
-void CUiManager::LoadWorld(CWorld& world)
+void UiManager::LoadLevel(Level& level)
 {
     ImGui::TextColored(ImVec4(1, 1, 0, 1), "Load");
 
-    // This prevents the program from crashing from a clean slate (i.e., no worlds have been saved yet)
-    if (m_worldsToLoad.empty())
+    // This prevents the program from crashing from a clean slate (i.e., no levels have been saved yet)
+    if (m_levelsToLoad.empty())
     {
-        ImGui::Text("Save at least 1 world so worlds can be loaded.");
+        ImGui::Text("Save at least 1 level so levels can be loaded.");
         return;
     }
 
-    if (ImGui::BeginCombo("World to load", m_worldsToLoad[UiSettings::WORLD_CURRENT_INDEX].data(), 0))
+    if (ImGui::BeginCombo("Level to load", m_levelsToLoad[UiSettings::LEVEL_CURRENT_INDEX].data(), 0))
     {
-        for (int n = 0; n < m_worldsToLoad.size(); n++)
+        for (int n = 0; n < m_levelsToLoad.size(); n++)
         {
-            const bool is_selected = (UiSettings::WORLD_CURRENT_INDEX == n);
-            if (ImGui::Selectable(m_worldsToLoad[n].data(), is_selected))
+            const bool is_selected = (UiSettings::LEVEL_CURRENT_INDEX == n);
+            if (ImGui::Selectable(m_levelsToLoad[n].data(), is_selected))
             {
-                UiSettings::WORLD_CURRENT_INDEX = n;
+                UiSettings::LEVEL_CURRENT_INDEX = n;
                 UiSettings::LEVEL_COMPLETED_TIME = INT_MAX; // Reset level completed time
 
-                world.Clear();
-                world.Load(m_worldsToLoad[UiSettings::WORLD_CURRENT_INDEX]);
+                level.Clear();
+                level.Load(m_levelsToLoad[UiSettings::LEVEL_CURRENT_INDEX]);
             }
 
             if (is_selected)
@@ -236,24 +238,35 @@ void CUiManager::LoadWorld(CWorld& world)
     }
 }
 
-void CUiManager::ResetLevel(CWorld& world)
+void UiManager::ResetLevel(Level& level)
 {
     ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.8f, 0.0f, 0.0f, 1.0f));
     ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.6f, 0.0f, 0.0f, 1.0f));
     if (ImGui::Button("Reset"))
     {
-        world.Reset();
+        level.Reset();
     }
     ImGui::PopStyleColor(2);
 }
 
-void CUiManager::ShowElapsedTime(CWorld& world)
+void UiManager::SolveLevel(Level& level)
 {
-    const int timeElapsed = static_cast<int>(world.GetClock().getElapsedTime().asSeconds());
+    ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.0f, 0.6f, 0.0f, 1.0f));
+    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.0f, 0.4f, 0.0f, 1.0f));
+    if (ImGui::Button("Solve"))
+    {
+        level.Solve();
+    }
+    ImGui::PopStyleColor(2);
+}
+
+void UiManager::ShowElapsedTime(Level& level)
+{
+    const int timeElapsed = static_cast<int>(level.GetClock().getElapsedTime().asSeconds());
     ImGui::Text("Time elapsed: %d seconds", timeElapsed);
 }
 
-void CUiManager::ShowLevelCompleted()
+void UiManager::ShowLevelCompleted()
 {
     ImGui::OpenPopup("Level completed");
 
@@ -269,22 +282,22 @@ void CUiManager::ShowLevelCompleted()
     }
 }
 
-void CUiManager::GetWorldsToLoad()
+void UiManager::GetLevelsToLoad()
 {
-    m_worldsToLoad.clear();
+    m_levelsToLoad.clear();
 
-    for (const auto& entry : std::filesystem::directory_iterator(std::string(GlobalSettings::WORLDS_PATH)))
+    for (const auto& entry : std::filesystem::directory_iterator(std::string(GlobalSettings::LEVELS_PATH)))
     {
         const auto& path = entry.path();
         if (path.extension() == ".txt")
         {
-            m_worldsToLoad.emplace_back(path.filename().string());
+            m_levelsToLoad.emplace_back(path.filename().string());
         }
     }
 
-    // Sort world files alphabetically
+    // Sort level files alphabetically
     std::sort(
-        m_worldsToLoad.begin(),
-        m_worldsToLoad.end(),
+        m_levelsToLoad.begin(),
+        m_levelsToLoad.end(),
         [](const std::string& a, const std::string& b) -> bool { return a < b; });
 }

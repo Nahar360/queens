@@ -7,17 +7,17 @@ namespace GlobalSettings
 {
 extern char WINDOW_TITLE[255];
 
-extern int WINDOW_WIDTH;
-extern int WINDOW_HEIGHT;
+inline const int WINDOW_WIDTH = 1280;
+inline const int WINDOW_HEIGHT = 720;
 
-extern char TEXTURES_PATH[255];
-extern char WORLDS_PATH[255];
+inline const char LEVELS_PATH[255] = "./src/levels/";
+inline const char TEXTURES_PATH[255] = "./src/textures/";
 
 extern sf::Color BACKGROUND_COLOR;
 extern float BACKGROUND_COLOR_INPUT[3];
 
-extern int TILE_SIZE;
-extern int TILE_DARK_FACTOR;
+inline const int TILE_SIZE = 64;
+inline const int TILE_DARK_FACTOR = 32;
 } // namespace GlobalSettings
 
 #endif // GLOBAL_SETTINGS_HPP

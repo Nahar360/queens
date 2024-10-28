@@ -5,33 +5,33 @@
 
 #include <SFML/Graphics.hpp>
 
-#include "World.hpp"
+#include "Level.hpp"
 
-class CUiManager
+class UiManager
 {
 public:
-    CUiManager() = default;
-    ~CUiManager() = default;
+    UiManager() = default;
+    ~UiManager() = default;
 
     void Init(sf::RenderWindow& window);
     void Shutdown();
 
-    std::vector<std::string> getWorldsToLoad() const { return m_worldsToLoad; }
+    std::vector<std::string> getLevelsToLoad() const { return m_levelsToLoad; }
 
     void ProcessEvent(sf::Event event);
 
-    void Run(sf::RenderWindow& window, CWorld& world, float fps);
+    void Run(sf::RenderWindow& window, Level& level, float fps);
     void Render(sf::RenderWindow& window);
 
 private:
     sf::Clock m_deltaClock;
 
-    std::vector<std::string> m_worldsToLoad;
+    std::vector<std::string> m_levelsToLoad;
 
     // UI
     void Update(sf::RenderWindow& window);
     void Begin();
-    void HandleUi(sf::RenderWindow& window, CWorld& world, float fps);
+    void HandleUi(sf::RenderWindow& window, Level& level, float fps);
     void End();
 
     void Reload();
@@ -43,17 +43,18 @@ private:
 
     void ShowRules();
 
-    void DebugUi(CWorld& world);
+    void DebugUi(Level& level);
 
-    void LoadWorld(CWorld& world);
+    // Level related
+    void LoadLevel(Level& level);
+    void ResetLevel(Level& level);
+    void SolveLevel(Level& level);
 
-    void ResetLevel(CWorld& world);
-
-    void ShowElapsedTime(CWorld& world);
+    void ShowElapsedTime(Level& level);
     void ShowLevelCompleted();
 
-    // Non-UI
-    void GetWorldsToLoad();
+    // Non-UI helper functions
+    void GetLevelsToLoad();
 };
 
 #endif // UI_MANAGER_HPP

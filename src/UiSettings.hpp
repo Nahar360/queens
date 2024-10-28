@@ -3,10 +3,10 @@
 
 namespace UiSettings
 {
-extern int WORLD_COLS;
-extern int WORLD_ROWS;
+extern int LEVEL_COLS;
+extern int LEVEL_ROWS;
 
-extern int WORLD_CURRENT_INDEX;
+extern int LEVEL_CURRENT_INDEX;
 
 extern bool SHOW_DEBUG_OPTIONS;
 

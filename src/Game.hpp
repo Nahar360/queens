@@ -3,14 +3,14 @@
 
 #include <SFML/Graphics.hpp>
 
+#include "Level.hpp"
 #include "UiManager.hpp"
-#include "World.hpp"
 
-class CGame
+class Game
 {
 public:
-    CGame();
-    ~CGame() = default;
+    Game();
+    ~Game() = default;
 
     void Init();
     void Run();
@@ -19,8 +19,8 @@ public:
 private:
     sf::RenderWindow m_window;
 
-    CUiManager m_uiManager;
-    CWorld m_world;
+    UiManager m_uiManager;
+    Level m_level;
 
     bool m_mouseHasBeenPressed = false;
 

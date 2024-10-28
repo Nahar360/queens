@@ -11,13 +11,13 @@
 #include "GlobalSettings.hpp"
 #include "ResourceManager.hpp"
 
-CTile::CTile(int id, int colorId, sf::Color color, sf::Vector2i coords, sf::Vector2f pos) : m_id(id), m_colorId(colorId), m_originalColor(color), m_coords(coords), m_pos(pos), m_mark(Mark::EMPTY)
+Tile::Tile(int id, int colorId, sf::Color color, sf::Vector2i coords, sf::Vector2f pos) : m_id(id), m_colorId(colorId), m_originalColor(color), m_coords(coords), m_pos(pos), m_mark(Mark::EMPTY)
 {
     // Set the original color as the current color
     m_currentColor = m_originalColor;
 }
 
-void CTile::Init()
+void Tile::Init()
 {
     // Position
     m_tile.setPosition(m_pos);
@@ -36,7 +36,7 @@ void CTile::Init()
     ClearMark();
 }
 
-void CTile::Draw(sf::RenderWindow& window)
+void Tile::Draw(sf::RenderWindow& window)
 {
     // Tile
     window.draw(m_tile);
@@ -45,7 +45,7 @@ void CTile::Draw(sf::RenderWindow& window)
     window.draw(m_sprite);
 }
 
-bool CTile::MouseHover(sf::Vector2i mousePos)
+bool Tile::MouseHover(sf::Vector2i mousePos)
 {
     const sf::Vector2f mousePosFloat = sf::Vector2f(static_cast<float>(mousePos.x), static_cast<float>(mousePos.y));
     if (m_tile.getGlobalBounds().contains(mousePosFloat) && !m_isBeingHovered)
@@ -66,12 +66,12 @@ bool CTile::MouseHover(sf::Vector2i mousePos)
     return false;
 }
 
-void CTile::ResetHoverState()
+void Tile::ResetHoverState()
 {
     m_isBeingHovered = false;
 }
 
-void CTile::DarkenColor()
+void Tile::DarkenColor()
 {
     const sf::Color darkerColor = sf::Color(
         std::max(0, static_cast<int>(m_originalColor.r) - GlobalSettings::TILE_DARK_FACTOR),
@@ -81,7 +81,7 @@ void CTile::DarkenColor()
     UpdateColor(darkerColor);
 }
 
-bool CTile::MouseDetection(sf::Mouse::Button mouseButton, sf::Vector2i mousePos)
+bool Tile::MouseDetection(sf::Mouse::Button mouseButton, sf::Vector2i mousePos)
 {
     const sf::Vector2f mousePosFloat = sf::Vector2f(static_cast<float>(mousePos.x), static_cast<float>(mousePos.y));
     if (m_tile.getGlobalBounds().contains(mousePosFloat))
@@ -114,114 +114,114 @@ bool CTile::MouseDetection(sf::Mouse::Button mouseButton, sf::Vector2i mousePos)
     return false;
 }
 
-void CTile::SetId(int id)
+void Tile::SetId(int id)
 {
     m_id = id;
 }
 
-int CTile::GetId() const
+int Tile::GetId() const
 {
     return m_id;
 }
 
-void CTile::SetColorId(int colorId)
+void Tile::SetColorId(int colorId)
 {
     m_colorId = colorId;
 }
 
-int CTile::GetColorId() const
+int Tile::GetColorId() const
 {
     return m_colorId;
 }
 
-sf::Color CTile::GetOriginalColor() const
+sf::Color Tile::GetOriginalColor() const
 {
     return m_originalColor;
 }
 
-void CTile::SetOriginalColor(const sf::Color& color)
+void Tile::SetOriginalColor(const sf::Color& color)
 {
     m_originalColor = color;
 }
 
-sf::Color CTile::GetCurrentColor() const
+sf::Color Tile::GetCurrentColor() const
 {
     return m_currentColor;
 }
 
-void CTile::SetCurrentColor(const sf::Color& color)
+void Tile::SetCurrentColor(const sf::Color& color)
 {
     m_currentColor = color;
 }
 
-void CTile::UpdateColor(sf::Color color)
+void Tile::UpdateColor(sf::Color color)
 {
     m_currentColor = color;
     m_tile.setFillColor(m_currentColor);
 }
 
-void CTile::ResetColor()
+void Tile::ResetColor()
 {
     m_currentColor = m_originalColor;
     m_tile.setFillColor(m_currentColor);
 }
 
-void CTile::SetCoords(const sf::Vector2i& coords)
+void Tile::SetCoords(const sf::Vector2i& coords)
 {
     m_coords = coords;
 }
 
-sf::Vector2i CTile::GetCoords() const
+sf::Vector2i Tile::GetCoords() const
 {
     return m_coords;
 }
 
-void CTile::SetPosition(const sf::Vector2f& pos)
+void Tile::SetPosition(const sf::Vector2f& pos)
 {
     m_tile.setPosition(pos);
 }
 
-sf::Vector2f CTile::GetPosition() const
+sf::Vector2f Tile::GetPosition() const
 {
     return m_tile.getPosition();
 }
 
-void CTile::SetMark(Mark mark)
+void Tile::SetMark(Mark mark)
 {
     m_mark = mark;
 }
 
-Mark CTile::GetMark() const
+Mark Tile::GetMark() const
 {
     return m_mark;
 }
 
-sf::Vector2f CTile::GetSize() const
+sf::Vector2f Tile::GetSize() const
 {
     return m_tile.getSize();
 }
 
-sf::FloatRect CTile::GetGlobalBounds() const
+sf::FloatRect Tile::GetGlobalBounds() const
 {
     return m_tile.getGlobalBounds();
 }
 
-bool CTile::isMarkEmpty() const
+bool Tile::isMarkEmpty() const
 {
     return m_mark == Mark::EMPTY;
 }
 
-bool CTile::isMarkX() const
+bool Tile::isMarkX() const
 {
     return m_mark == Mark::X;
 }
 
-bool CTile::isMarkQueen() const
+bool Tile::isMarkQueen() const
 {
     return m_mark == Mark::QUEEN;
 }
 
-void CTile::ClearMark()
+void Tile::ClearMark()
 {
     m_mark = Mark::EMPTY;
 
@@ -230,7 +230,7 @@ void CTile::ClearMark()
     SetSprite(transparentTexture);
 }
 
-void CTile::PlaceX()
+void Tile::PlaceX()
 {
     m_mark = Mark::X;
 
@@ -241,7 +241,7 @@ void CTile::PlaceX()
     SetSprite(xTexture, offset, scale);
 }
 
-void CTile::PlaceQueen()
+void Tile::PlaceQueen()
 {
     m_mark = Mark::QUEEN;
 
@@ -252,7 +252,7 @@ void CTile::PlaceQueen()
     SetSprite(queenTexture, offset, scale);
 }
 
-void CTile::SetSprite(const sf::Texture& texture, const float offset, const sf::Vector2f& scale)
+void Tile::SetSprite(const sf::Texture& texture, const float offset, const sf::Vector2f& scale)
 {
     m_sprite.setTexture(texture);
     m_sprite.setPosition(m_pos.x + offset, m_pos.y + offset);
@@ -261,7 +261,7 @@ void CTile::SetSprite(const sf::Texture& texture, const float offset, const sf::
 
 // -------
 
-std::ostream& operator<<(std::ostream& os, const CTile& tile)
+std::ostream& operator<<(std::ostream& os, const Tile& tile)
 {
     os << "Tile" << std::endl;
     os << "Id: " << tile.GetId() << std::endl;

@@ -3,24 +3,24 @@
 #include "GlobalSettings.hpp"
 #include "ResourceManager.hpp"
 
-CGame::CGame()
+Game::Game()
     : m_window(sf::VideoMode(GlobalSettings::WINDOW_WIDTH, GlobalSettings::WINDOW_HEIGHT), GlobalSettings::WINDOW_TITLE)
 {
     srand(time(NULL));
 }
 
-void CGame::Init()
+void Game::Init()
 {
     ResourceManager::getInstance().Load();
 
     m_uiManager.Init(m_window);
 
-    // Load the first world
-    const std::vector<std::string> worldsToLoad = m_uiManager.getWorldsToLoad();
-    m_world.Init(worldsToLoad[0]);
+    // Load the first level
+    const std::vector<std::string> levelsToLoad = m_uiManager.getLevelsToLoad();
+    m_level.Init(levelsToLoad[0]);
 }
 
-void CGame::Run()
+void Game::Run()
 {
     sf::Clock clock = sf::Clock();
     sf::Time previousTime = clock.getElapsedTime();
@@ -37,11 +37,11 @@ void CGame::Run()
 
         CheckEvents();
 
-        m_uiManager.Run(m_window, m_world, fps);
+        m_uiManager.Run(m_window, m_level, fps);
 
         m_window.clear(GlobalSettings::BACKGROUND_COLOR);
 
-        m_world.Update(m_window);
+        m_level.Update(m_window);
 
         m_uiManager.Render(m_window);
 
@@ -49,22 +49,22 @@ void CGame::Run()
     }
 }
 
-void CGame::Shutdown()
+void Game::Shutdown()
 {
     m_uiManager.Shutdown();
 }
 
-void CGame::CheckMouseHover()
+void Game::CheckMouseHover()
 {
-    // We are only interested on hover events if the world has been loaded
-    if (m_world.HasLoaded())
+    // We are only interested on hover events if the level has been loaded
+    if (m_level.HasLoaded())
     {
         const sf::Vector2i mousePos = sf::Mouse::getPosition(m_window);
-        m_world.ChangeHoveredTileColor(mousePos);
+        m_level.ChangeHoveredTileColor(mousePos);
     }
 }
 
-void CGame::CheckEvents()
+void Game::CheckEvents()
 {
     sf::Event event;
     while (m_window.pollEvent(event))
@@ -78,7 +78,7 @@ void CGame::CheckEvents()
 
         if (event.type == sf::Event::MouseButtonPressed)
         {
-            m_world.MouseDetection(event.mouseButton.button, sf::Mouse::getPosition(m_window));
+            m_level.MouseDetection(event.mouseButton.button, sf::Mouse::getPosition(m_window));
         }
     }
 }
