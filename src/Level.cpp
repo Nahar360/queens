@@ -1,5 +1,6 @@
 #include "Level.hpp"
 
+#include <cstddef>
 #include <fstream>
 #include <iostream>
 #include <unordered_map>
@@ -16,17 +17,17 @@
 // clang-format off
 
 // Define and initialize the REGIONS_COLORS static member variable (https://loading.io/color/feature/Set3-10/)
-const std::vector<sf::Color> Level::REGIONS_COLORS = {
-    sf::Color(141, 211, 199), // Turquoise
-    sf::Color(255, 255, 179), // Light yellow
-    sf::Color(190, 186, 218), // Lavender
-    sf::Color(251, 128, 114), // Salmon
-    sf::Color(128, 177, 211), // Sky blue
-    sf::Color(253, 180, 98),  // Light orange
-    sf::Color(179, 222, 105), // Light green
-    sf::Color(252, 205, 229), // Light pink
-    sf::Color(217, 217, 217), // Light grey
-    sf::Color(188, 128, 189)  // Purple
+const std::vector<ColorInfo> Level::REGIONS_COLORS = {
+    {"Turquoise",    sf::Color(141, 211, 199)},
+    {"Light yellow", sf::Color(255, 255, 179)},
+    {"Lavender",     sf::Color(190, 186, 218)},
+    {"Salmon",       sf::Color(251, 128, 114)},
+    {"Sky blue",     sf::Color(128, 177, 211)},
+    {"Light orange", sf::Color(253, 180, 98)},
+    {"Light green",  sf::Color(179, 222, 105)},
+    {"Light pink",   sf::Color(252, 205, 229)},
+    {"Light grey",   sf::Color(217, 217, 217)},
+    {"Purple",       sf::Color(188, 128, 189)}
 };
 
 // Define and initialize the NEIGHBOURS_OFFSETS static member variable
@@ -60,12 +61,11 @@ void Level::InitTilesFromRepr(const std::vector<std::vector<int>>& repr)
     }
 
     // Initialise tiles depending on representation
-    std::unordered_map<int, sf::Color> colorSet;
-    for (int i = 0; i < repr.size(); i++)
+    for (size_t i = 0; i < repr.size(); i++)
     {
         std::vector<Tile> tiles_row;
         const int numColumns = repr[i].size();
-        for (int j = 0; j < numColumns; j++)
+        for (size_t j = 0; j < numColumns; j++)
         {
             // id
             const int id = (i * numColumns) + j;
@@ -77,8 +77,8 @@ void Level::InitTilesFromRepr(const std::vector<std::vector<int>>& repr)
                 std::cerr << "Levels with more than " << Level::REGIONS_COLORS.size() << " colors are not supported." << std::endl;
                 return;
             }
-            const sf::Color color = Level::REGIONS_COLORS[colorId % Level::REGIONS_COLORS.size()];
-            colorSet[colorId] = color; // add color to the set, associated to its colorId
+            const ColorInfo color = Level::REGIONS_COLORS[colorId % Level::REGIONS_COLORS.size()];
+            m_regionsColors[colorId] = color; // add color to the set, associated to its colorId
             
             // coords
             const sf::Vector2i coords(i, j);
@@ -86,7 +86,7 @@ void Level::InitTilesFromRepr(const std::vector<std::vector<int>>& repr)
             // pos
             const sf::Vector2f pos((j + 1) * GlobalSettings::TILE_SIZE, (i + 1) * GlobalSettings::TILE_SIZE);
 
-            Tile tile(id, colorId, color, coords, pos);
+            Tile tile(id, colorId, color.second, coords, pos);
             tile.Init();
 
             tiles_row.emplace_back(tile);
@@ -94,9 +94,6 @@ void Level::InitTilesFromRepr(const std::vector<std::vector<int>>& repr)
 
         m_tiles.emplace_back(tiles_row);
     }
-
-    // The number of regions is equal to the number of different colors
-    m_numRegions = colorSet.size();
 }
 
 bool Level::HasLoaded()
@@ -109,36 +106,41 @@ void Level::Clear()
     UiSettings::LEVEL_COMPLETED_TIME = INT_MAX;
 
     m_tiles.clear();
-    m_numRegions = 0;
+    m_regionsColors.clear();
     m_clock.restart();
 }
 
 void Level::Update(sf::RenderWindow& window)
 {
-    for (int i = 0; i < m_tiles.size(); i++)
+    for (size_t i = 0; i < m_tiles.size(); i++)
     {
-        for (int j = 0; j < m_tiles[0].size(); j++)
+        for (size_t j = 0; j < m_tiles[0].size(); j++)
         {
             m_tiles[i][j].Draw(window);
         }
     }
 }
 
+void Level::InternalCheck()
+{
+    // Check if the level has been completed after each move
+    const bool levelCompleted = Check();
+    if (levelCompleted)
+    {
+        // If the level has been completed, we save the time it took to complete it
+        UiSettings::LEVEL_COMPLETED_TIME = static_cast<int>(m_clock.getElapsedTime().asSeconds());
+    }
+}
+
 void Level::MouseDetection(sf::Mouse::Button mouseButton, sf::Vector2i mousePos)
 {
-    for (int i = 0; i < m_tiles.size(); i++)
+    for (size_t i = 0; i < m_tiles.size(); i++)
     {
-        for (int j = 0; j < m_tiles[0].size(); j++)
+        for (size_t j = 0; j < m_tiles[0].size(); j++)
         {
             if (m_tiles[i][j].MouseDetection(mouseButton, mousePos))
             {
-                // Check if the level has been completed after each move
-                const bool levelCompleted = Check();
-                if (levelCompleted)
-                {
-                    // If the level has been completed, we save the time it took to complete it
-                    UiSettings::LEVEL_COMPLETED_TIME = static_cast<int>(m_clock.getElapsedTime().asSeconds());
-                }
+                InternalCheck();
 
                 break;
             }
@@ -155,9 +157,9 @@ void Level::ChangeHoveredTileColor(sf::Vector2i mousePos)
 {
     if (IsMousePosWithinLevelBounds(mousePos))
     {
-        for (int i = 0; i < m_tiles.size(); i++)
+        for (size_t i = 0; i < m_tiles.size(); i++)
         {
-            for (int j = 0; j < m_tiles[0].size(); j++)
+            for (size_t j = 0; j < m_tiles[0].size(); j++)
             {
                 if (m_tiles[i][j].MouseHover(mousePos))
                 {
@@ -170,9 +172,9 @@ void Level::ChangeHoveredTileColor(sf::Vector2i mousePos)
     // so the tile should reset its color
     else
     {
-        for (int i = 0; i < m_tiles.size(); i++)
+        for (size_t i = 0; i < m_tiles.size(); i++)
         {
-            for (int j = 0; j < m_tiles[0].size(); j++)
+            for (size_t j = 0; j < m_tiles[0].size(); j++)
             {
                 if (m_tiles[i][j].WasBeingHovered())
                 {
@@ -188,9 +190,9 @@ void Level::ChangeHoveredTileColor(sf::Vector2i mousePos)
 
 void Level::PrintRepresentation()
 {
-    for (int i = 0; i < m_tiles.size(); i++)
+    for (size_t i = 0; i < m_tiles.size(); i++)
     {
-        for (int j = 0; j < m_tiles[0].size(); j++)
+        for (size_t j = 0; j < m_tiles[0].size(); j++)
         {
             std::cout << static_cast<int>(m_tiles[i][j].GetColorId());
         }
@@ -202,7 +204,7 @@ void Level::Load(const std::string& levelFileName)
 {
     std::vector<std::vector<int>> repr;
 
-    std::string levelFilePath = std::string(GlobalSettings::LEVELS_PATH) + levelFileName;
+    const std::string levelFilePath = std::string(GlobalSettings::LEVELS_PATH) + levelFileName;
     std::ifstream levelFile(levelFilePath);
     if (levelFile.is_open())
     {
@@ -210,7 +212,7 @@ void Level::Load(const std::string& levelFileName)
         while (getline(levelFile, line))
         {
             std::vector<int> row;
-            for (int i = 0; i < line.length(); i++)
+            for (size_t i = 0; i < line.length(); i++)
             {
                 const int tileNumber = static_cast<int>(line[i]) - 48; // 48 is the ASCII value of 0
                 row.emplace_back(tileNumber);
@@ -250,7 +252,7 @@ bool Level::Check()
 
 bool Level::CheckRows()
 {
-    for (int i = 0; i < m_tiles.size(); i++)
+    for (size_t i = 0; i < m_tiles.size(); i++)
     {
         const int numberOfQueensInRow = GetNumberOfQueensInVector(m_tiles[i]);
         const int rowNumber = i + 1;
@@ -273,12 +275,12 @@ bool Level::CheckRows()
 
 bool Level::CheckColumns()
 {
-    for (int i = 0; i < m_tiles.size(); i++)
+    for (size_t i = 0; i < m_tiles.size(); i++)
     {
         std::vector<Tile> column;
         // Allocate the required memory for the vector in one go, so it avoids multiple allocations (which would involve copying the elements to a new memory location)
         column.reserve(UiSettings::LEVEL_ROWS);
-        for (int j = 0; j < m_tiles[0].size(); j++)
+        for (size_t j = 0; j < m_tiles[0].size(); j++)
         {
             column.emplace_back(m_tiles[j][i]);
         }
@@ -304,21 +306,22 @@ bool Level::CheckColumns()
 
 bool Level::CheckRegions()
 {
-    for (int i = 0; i < m_numRegions; i++)
+    const size_t numRegions = m_regionsColors.size();
+    for (size_t i = 0; i < numRegions; i++)
     {
-        const std::vector<Tile>& region = GetRegionTiles(i);
+        const std::vector<Tile>& regionTiles = GetTilesInRegion(m_regionsColors.at(i).first);
+        const int numberOfQueensInRegion = GetNumberOfQueensInVector(regionTiles);
+        const std::string colorStr = ColorIdToColorStr(i);
 
-        const int numberOfQueensInRegion = GetNumberOfQueensInVector(region);
-        const int regionNumber = i + 1;
         if (numberOfQueensInRegion == 0)
         {
-            std::cout << "No queen in region " << regionNumber << std::endl; // TODO: Add region colour
+            std::cout << "No queen in region " << colorStr << std::endl;
 
             return false;
         }
         else if (numberOfQueensInRegion > 1)
         {
-            std::cout << "More than 1 queen in region " << regionNumber << std::endl; // TODO: Add region colour
+            std::cout << "More than 1 queen in region " << colorStr << std::endl;
 
             return false;
         }
@@ -329,15 +332,15 @@ bool Level::CheckRegions()
 
 bool Level::CheckProximities()
 {
-    for (int i = 0; i < m_tiles.size(); i++)
+    for (size_t i = 0; i < m_tiles.size(); i++)
     {
-        for (int j = 0; j < m_tiles[0].size(); j++)
+        for (size_t j = 0; j < m_tiles[0].size(); j++)
         {
             if (m_tiles[i][j].isMarkQueen())
             {
                 const std::vector<Tile>& neighbours = GetNeighboursOfTile(m_tiles[i][j]);
                 int numberOfQueensInProximity = 0;
-                for (int k = 0; k < neighbours.size(); k++)
+                for (size_t k = 0; k < neighbours.size(); k++)
                 {
                     if (neighbours[k].isMarkQueen())
                     {
@@ -394,7 +397,7 @@ int Level::GetNumberOfQueensInVector(const std::vector<Tile>& tiles) const
 {
     int numberOfQueens = 0;
 
-    for (int i = 0; i < tiles.size(); i++)
+    for (size_t i = 0; i < tiles.size(); i++)
     {
         if (tiles[i].isMarkQueen())
         {
@@ -409,7 +412,7 @@ std::vector<Tile> Level::GetEmptyTilesInVector(const std::vector<Tile>& tiles) c
 {
     std::vector<Tile> emptyTiles;
 
-    for (int i = 0; i < tiles.size(); i++)
+    for (size_t i = 0; i < tiles.size(); i++)
     {
         if (tiles[i].isMarkEmpty())
         {
@@ -422,9 +425,9 @@ std::vector<Tile> Level::GetEmptyTilesInVector(const std::vector<Tile>& tiles) c
 
 void Level::Reset()
 {
-    for (int i = 0; i < m_tiles.size(); i++)
+    for (size_t i = 0; i < m_tiles.size(); i++)
     {
-        for (int j = 0; j < m_tiles[0].size(); j++)
+        for (size_t j = 0; j < m_tiles[0].size(); j++)
         {
             m_tiles[i][j].ClearMark();
         }
@@ -435,20 +438,22 @@ void Level::Solve()
 {
     bool moveDone = false;
 
+    // TODO: extract each "rule" to a helper function
+
     // 1. Check that for all queens, all related crossing out has been done
-    for (int i = 0; i < m_tiles.size(); i++)
+    for (size_t i = 0; i < m_tiles.size(); i++)
     {
-        for (int j = 0; j < m_tiles[0].size(); j++)
+        for (size_t j = 0; j < m_tiles[0].size(); j++)
         {
             const Tile& tile = m_tiles[i][j];
             if (tile.isMarkQueen())
             {
-                const sf::Vector2i& tileCoords = tile.GetCoords();
-                const bool crossedOutAnyTilesInRow = CrossOutTilesInRow(tileCoords);
-                const bool crossedOutAnyTilesInColumn = CrossOutTilesInColumn(tileCoords);
+                const bool crossedOutAnyTilesInRow = CrossOutTilesInRow(tile);
+                const bool crossedOutAnyTilesInColumn = CrossOutTilesInColumn(tile);
                 const bool crossedOutAnyTilesInProximity = CrossOutTilesInProximity(tile);
+                const bool crossedOutAnyTilesInRegion = CrossOutTilesInRegion(tile);
 
-                moveDone = crossedOutAnyTilesInRow || crossedOutAnyTilesInColumn || crossedOutAnyTilesInProximity;
+                moveDone = crossedOutAnyTilesInRow || crossedOutAnyTilesInColumn || crossedOutAnyTilesInProximity || crossedOutAnyTilesInRegion;
                 if (moveDone)
                 {
                     return; // 1 move at a time
@@ -461,9 +466,10 @@ void Level::Solve()
     // This includes:
     // - regions with exclusively only 1 tile
     // - regions with more than 1 tile but only 1 empty one
-    for (int i = 0; i < m_numRegions; i++)
+    const size_t numRegions = m_regionsColors.size();
+    for (size_t i = 0; i < numRegions; i++)
     {
-        const std::vector<Tile>& regionTiles = GetRegionTiles(i);
+        const std::vector<Tile>& regionTiles = GetTilesInRegion(m_regionsColors.at(i).first);
         const std::vector<Tile>& emptyTilesInRegion = GetEmptyTilesInVector(regionTiles);
 
         // If there is only 1 empty tile in the region
@@ -478,9 +484,9 @@ void Level::Solve()
             std::cout << "Region " << i + 1 << " has only 1 tile available, therefore marked it with a queen (coords.: [" << tileCoords.x << ", " << tileCoords.y << "])" << std::endl;
 
             // Second, we cross out the rest of the tiles in same row, column and its proximity
-            // (we would also cross out in the same region, but in this case there is only 1 tile in the region)
-            const bool crossedOutAnyTilesInRow = CrossOutTilesInRow(tileCoords);
-            const bool crossedOutAnyTilesInColumn = CrossOutTilesInColumn(tileCoords);
+            // (we would also cross out other tiles in the same region, but in this case there is only 1 tile in the region, so it does not make sense)
+            const bool crossedOutAnyTilesInRow = CrossOutTilesInRow(tile);
+            const bool crossedOutAnyTilesInColumn = CrossOutTilesInColumn(tile);
             const bool crossedOutAnyTilesInProximity = CrossOutTilesInProximity(tile);
 
             moveDone = crossedOutAnyTilesInRow || crossedOutAnyTilesInColumn || crossedOutAnyTilesInProximity;
@@ -497,9 +503,12 @@ void Level::Solve()
     // 4. Check if there are any rows or columns which are completely of the same colour
     //    If so, cross out the rest of the tiles in the region of that colour
     //    Edge case: if there's a row and a column of the same colour which coincide in a tile, mark it as a queen and cross out the rest of the tiles in the region
+
+    // After each move, we check if the level has been completed
+    InternalCheck();
 }
 
-std::vector<Tile> Level::GetRegionTiles(int regionColorId) const
+std::vector<Tile> Level::GetTilesInRegion(int colorId) const
 {
     std::vector<Tile> region;
 
@@ -508,7 +517,7 @@ std::vector<Tile> Level::GetRegionTiles(int regionColorId) const
         for (size_t j = 0; j < m_tiles[i].size(); j++)
         {
             const Tile& tileCandidate = m_tiles[i][j];
-            if (tileCandidate.GetColorId() == regionColorId)
+            if (tileCandidate.GetColorId() == colorId)
             {
                 region.emplace_back(tileCandidate);
             }
@@ -518,9 +527,31 @@ std::vector<Tile> Level::GetRegionTiles(int regionColorId) const
     return region;
 }
 
-bool Level::CrossOutTilesInRow(const sf::Vector2i& tileCoords)
+std::vector<Tile> Level::GetTilesInRegion(const std::string& colorStr) const
+{
+    std::vector<Tile> region;
+
+    for (size_t i = 0; i < m_tiles.size(); i++)
+    {
+        for (size_t j = 0; j < m_tiles[i].size(); j++)
+        {
+            const Tile& tileCandidate = m_tiles[i][j];
+            const int colorId = ColorStrToColorId(colorStr);
+            if (tileCandidate.GetColorId() == colorId)
+            {
+                region.emplace_back(tileCandidate);
+            }
+        }
+    }
+
+    return region;
+}
+
+bool Level::CrossOutTilesInRow(const Tile& tile)
 {
     bool crossedOutAny = false;
+
+    const sf::Vector2i& tileCoords = tile.GetCoords();
 
     std::cout << "Crossing out tiles in row " << tileCoords.x << std::endl;
 
@@ -546,9 +577,11 @@ bool Level::CrossOutTilesInRow(const sf::Vector2i& tileCoords)
     return crossedOutAny;
 }
 
-bool Level::CrossOutTilesInColumn(const sf::Vector2i& tileCoords)
+bool Level::CrossOutTilesInColumn(const Tile& tile)
 {
     bool crossedOutAny = false;
+
+    const sf::Vector2i& tileCoords = tile.GetCoords();
 
     std::cout << "Crossing out tiles in column " << tileCoords.y << std::endl;
 
@@ -597,4 +630,49 @@ bool Level::CrossOutTilesInProximity(const Tile& tile)
     }
 
     return crossedOutAny;
+}
+
+bool Level::CrossOutTilesInRegion(const Tile& tile)
+{
+    bool crossedOutAny = false;
+
+    const int tileColorId = tile.GetColorId();
+
+    std::cout << "Crossing out tiles in region " << tileColorId << std::endl;
+
+    const std::vector<Tile>& regionTiles = GetTilesInRegion(tileColorId);
+    for (const Tile& regionTile : regionTiles)
+    {
+        if (regionTile.isMarkEmpty())
+        {
+            const sf::Vector2i regionTileCoords = regionTile.GetCoords();
+            m_tiles[regionTileCoords.x][regionTileCoords.y].PlaceX();
+
+            // We set the flag to true if we have crossed out any tile
+            if (!crossedOutAny)
+            {
+                crossedOutAny = true;
+            }
+        }
+    }
+
+    return crossedOutAny;
+}
+
+std::string Level::ColorIdToColorStr(int colorId) const
+{
+    return m_regionsColors.at(colorId).first;
+}
+
+int Level::ColorStrToColorId(const std::string& colorStr) const
+{
+    for (const auto& color : m_regionsColors)
+    {
+        if (color.second.first == colorStr)
+        {
+            return color.first;
+        }
+    }
+
+    return -1;
 }

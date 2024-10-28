@@ -24,6 +24,7 @@ Based on [Queens, by LinkedIn](https://www.linkedin.com/showcase/queens-game/)
 
 # TODO
 
+- Update README.md with latest updates.
 - Hints system.
 - Algorithm to solve level.
 - Highlight offending queens when they are not right in a given level.

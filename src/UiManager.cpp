@@ -217,19 +217,19 @@ void UiManager::LoadLevel(Level& level)
 
     if (ImGui::BeginCombo("Level to load", m_levelsToLoad[UiSettings::LEVEL_CURRENT_INDEX].data(), 0))
     {
-        for (int n = 0; n < m_levelsToLoad.size(); n++)
+        for (size_t i = 0; i < m_levelsToLoad.size(); i++)
         {
-            const bool is_selected = (UiSettings::LEVEL_CURRENT_INDEX == n);
-            if (ImGui::Selectable(m_levelsToLoad[n].data(), is_selected))
+            const bool isSelected = (UiSettings::LEVEL_CURRENT_INDEX == i);
+            if (ImGui::Selectable(m_levelsToLoad[i].data(), isSelected))
             {
-                UiSettings::LEVEL_CURRENT_INDEX = n;
+                UiSettings::LEVEL_CURRENT_INDEX = i;
                 UiSettings::LEVEL_COMPLETED_TIME = INT_MAX; // Reset level completed time
 
                 level.Clear();
                 level.Load(m_levelsToLoad[UiSettings::LEVEL_CURRENT_INDEX]);
             }
 
-            if (is_selected)
+            if (isSelected)
             {
                 ImGui::SetItemDefaultFocus();
             }

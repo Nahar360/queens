@@ -10,6 +10,8 @@
 #include "SFML/System/Vector2.hpp"
 #include "Tile.hpp"
 
+using ColorInfo = std::pair<std::string, sf::Color>;
+
 class Level
 {
 public:
@@ -36,7 +38,7 @@ public:
     void Solve();
 
     // Static variables
-    static const std::vector<sf::Color> REGIONS_COLORS;
+    static const std::vector<ColorInfo> REGIONS_COLORS;
     static const std::vector<sf::Vector2i> NEIGHBOURS_OFFSETS;
 
     // Getters
@@ -44,7 +46,8 @@ public:
 
 private:
     std::vector<std::vector<Tile>> m_tiles;
-    int m_numRegions = 0; // Number of different regions
+
+    std::unordered_map<int, ColorInfo> m_regionsColors;
 
     sf::FloatRect m_globalBounds;
 
@@ -53,6 +56,7 @@ private:
     void InitTilesFromRepr(const std::vector<std::vector<int>>& repr);
 
     // 'Check' helper functions
+    void InternalCheck();
     bool CheckRows();
     bool CheckColumns();
     bool CheckRegions();
@@ -65,12 +69,17 @@ private:
     int GetNumberOfQueensInVector(const std::vector<Tile>& tiles) const;
     std::vector<Tile> GetEmptyTilesInVector(const std::vector<Tile>& tiles) const;
 
-    std::vector<Tile> GetRegionTiles(int regionColorId) const;
+    std::vector<Tile> GetTilesInRegion(int colorId) const;
+    std::vector<Tile> GetTilesInRegion(const std::string& colorStr) const;
 
-    bool CrossOutTilesInRow(const sf::Vector2i& tileCoords);
-    bool CrossOutTilesInColumn(const sf::Vector2i& tileCoords);
+    bool CrossOutTilesInRow(const Tile& tile);
+    bool CrossOutTilesInColumn(const Tile& tile);
     bool CrossOutTilesInProximity(const Tile& tile);
-    // TODO: bool CrossOutTilesInRegion(const Tile& tile);
+    bool CrossOutTilesInRegion(const Tile& tile);
+
+    // Super helper functions
+    std::string ColorIdToColorStr(int colorId) const;
+    int ColorStrToColorId(const std::string& colorStr) const;
 };
 
 #endif // LEVEL_HPP

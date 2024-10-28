@@ -266,8 +266,8 @@ std::ostream& operator<<(std::ostream& os, const Tile& tile)
     os << "Tile" << std::endl;
     os << "Id: " << tile.GetId() << std::endl;
     os << "Color Id: " << tile.GetColorId() << std::endl;
-    os << "Original Color: " << tile.GetOriginalColor().toInteger() << std::endl; // TODO: toString()
-    os << "Current Color: " << tile.GetCurrentColor().toInteger() << std::endl; // TODO: toString()
+    os << "Original Color: " << tile.GetOriginalColor().toInteger() << std::endl;
+    os << "Current Color: " << tile.GetCurrentColor().toInteger() << std::endl;
     os << "Coords.: [" << tile.GetCoords().x << ", " << tile.GetCoords().y << "]" << std::endl;
     os << std::endl;
 
