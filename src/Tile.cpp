@@ -114,46 +114,6 @@ bool Tile::MouseDetection(sf::Mouse::Button mouseButton, sf::Vector2i mousePos)
     return false;
 }
 
-void Tile::SetId(int id)
-{
-    m_id = id;
-}
-
-int Tile::GetId() const
-{
-    return m_id;
-}
-
-void Tile::SetColorId(int colorId)
-{
-    m_colorId = colorId;
-}
-
-int Tile::GetColorId() const
-{
-    return m_colorId;
-}
-
-sf::Color Tile::GetOriginalColor() const
-{
-    return m_originalColor;
-}
-
-void Tile::SetOriginalColor(const sf::Color& color)
-{
-    m_originalColor = color;
-}
-
-sf::Color Tile::GetCurrentColor() const
-{
-    return m_currentColor;
-}
-
-void Tile::SetCurrentColor(const sf::Color& color)
-{
-    m_currentColor = color;
-}
-
 void Tile::UpdateColor(sf::Color color)
 {
     m_currentColor = color;
@@ -164,36 +124,6 @@ void Tile::ResetColor()
 {
     m_currentColor = m_originalColor;
     m_tile.setFillColor(m_currentColor);
-}
-
-void Tile::SetCoords(const sf::Vector2i& coords)
-{
-    m_coords = coords;
-}
-
-sf::Vector2i Tile::GetCoords() const
-{
-    return m_coords;
-}
-
-void Tile::SetPosition(const sf::Vector2f& pos)
-{
-    m_tile.setPosition(pos);
-}
-
-sf::Vector2f Tile::GetPosition() const
-{
-    return m_tile.getPosition();
-}
-
-void Tile::SetMark(Mark mark)
-{
-    m_mark = mark;
-}
-
-Mark Tile::GetMark() const
-{
-    return m_mark;
 }
 
 sf::Vector2f Tile::GetSize() const

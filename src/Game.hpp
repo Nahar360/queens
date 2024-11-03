@@ -1,7 +1,7 @@
 #ifndef GAME_HPP
 #define GAME_HPP
 
-#include <SFML/Graphics.hpp>
+#include "SFML/Graphics/RenderWindow.hpp"
 
 #include "Level.hpp"
 #include "UiManager.hpp"

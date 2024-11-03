@@ -1,7 +1,7 @@
 #ifndef GLOBAL_SETTINGS_HPP
 #define GLOBAL_SETTINGS_HPP
 
-#include <SFML/Graphics.hpp>
+#include "SFML/Graphics/Color.hpp"
 
 namespace GlobalSettings
 {

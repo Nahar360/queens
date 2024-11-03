@@ -1,7 +1,10 @@
 #include "Game.hpp"
 
+#include "SFML/Window/Event.hpp"
+
 #include "GlobalSettings.hpp"
 #include "ResourceManager.hpp"
+#include "UiSettings.hpp"
 
 Game::Game()
     : m_window(sf::VideoMode(GlobalSettings::WINDOW_WIDTH, GlobalSettings::WINDOW_HEIGHT), GlobalSettings::WINDOW_TITLE)
@@ -56,8 +59,8 @@ void Game::Shutdown()
 
 void Game::CheckMouseHover()
 {
-    // We are only interested on hover events if the level has been loaded
-    if (m_level.HasLoaded())
+    // We are only interested on hover events if the level has been loaded and has still not been completed
+    if (m_level.HasLoaded() && !UiSettings::LEVEL_COMPLETED)
     {
         const sf::Vector2i mousePos = sf::Mouse::getPosition(m_window);
         m_level.ChangeHoveredTileColor(mousePos);
@@ -76,7 +79,7 @@ void Game::CheckEvents()
             m_window.close();
         }
 
-        if (event.type == sf::Event::MouseButtonPressed)
+        if (event.type == sf::Event::MouseButtonPressed && !UiSettings::LEVEL_COMPLETED)
         {
             m_level.MouseDetection(event.mouseButton.button, sf::Mouse::getPosition(m_window));
         }

@@ -18,7 +18,7 @@ public:
         return instance;
     }
 
-    void Load() // example member function
+    void Load()
     {
         std::cout << "Loading resources..." << std::endl;
 

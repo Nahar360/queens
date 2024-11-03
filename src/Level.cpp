@@ -1,14 +1,11 @@
 #include "Level.hpp"
 
-#include <cstddef>
+#include <algorithm> // std::all_of
 #include <fstream>
 #include <iostream>
+#include <string>
 #include <unordered_map>
 #include <vector>
-
-#include "SFML/Graphics/Color.hpp"
-#include "SFML/Graphics/Rect.hpp"
-#include "SFML/System/Vector2.hpp"
 
 #include "GlobalSettings.hpp"
 #include "Tile.hpp"
@@ -103,11 +100,10 @@ bool Level::HasLoaded()
 
 void Level::Clear()
 {
-    UiSettings::LEVEL_COMPLETED_TIME = INT_MAX;
+    Reset();
 
     m_tiles.clear();
     m_regionsColors.clear();
-    m_clock.restart();
 }
 
 void Level::Update(sf::RenderWindow& window)
@@ -124,15 +120,15 @@ void Level::Update(sf::RenderWindow& window)
 void Level::InternalCheck()
 {
     // Check if the level has been completed after each move
-    const bool levelCompleted = Check();
-    if (levelCompleted)
+    UiSettings::LEVEL_COMPLETED = Check();
+    if (UiSettings::LEVEL_COMPLETED && !UiSettings::POPUP_HAS_BEEN_CLOSED)
     {
         // If the level has been completed, we save the time it took to complete it
         UiSettings::LEVEL_COMPLETED_TIME = static_cast<int>(m_clock.getElapsedTime().asSeconds());
     }
 }
 
-void Level::MouseDetection(sf::Mouse::Button mouseButton, sf::Vector2i mousePos)
+void Level::MouseDetection(sf::Mouse::Button mouseButton, const sf::Vector2i& mousePos)
 {
     for (size_t i = 0; i < m_tiles.size(); i++)
     {
@@ -148,12 +144,12 @@ void Level::MouseDetection(sf::Mouse::Button mouseButton, sf::Vector2i mousePos)
     }
 }
 
-bool Level::IsMousePosWithinLevelBounds(sf::Vector2i mousePos) const
+bool Level::IsMousePosWithinLevelBounds(const sf::Vector2i& mousePos) const
 {
     return m_globalBounds.contains(static_cast<float>(mousePos.x), static_cast<float>(mousePos.y));
 }
 
-void Level::ChangeHoveredTileColor(sf::Vector2i mousePos)
+void Level::ChangeHoveredTileColor(const sf::Vector2i& mousePos)
 {
     if (IsMousePosWithinLevelBounds(mousePos))
     {
@@ -194,7 +190,7 @@ void Level::PrintRepresentation()
     {
         for (size_t j = 0; j < m_tiles[0].size(); j++)
         {
-            std::cout << static_cast<int>(m_tiles[i][j].GetColorId());
+            std::cout << m_tiles[i][j].GetColorId();
         }
         std::cout << std::endl;
     }
@@ -239,6 +235,7 @@ void Level::Load(const std::string& levelFileName)
 
 bool Level::Check()
 {
+    std::cout << "----- Checking start..." << std::endl;
     // 1 and only 1 Q in each row, column and colour region
     const bool rowsCheckSuccessful = CheckRows();
     const bool columnsCheckSuccessful = CheckColumns();
@@ -246,6 +243,8 @@ bool Level::Check()
 
     // 2 Qs cannot touch each other, not even diagonally
     const bool proximitiesCheckSuccessful = CheckProximities();
+
+    std::cout << "----- Checking end..." << std::endl;
 
     return rowsCheckSuccessful && columnsCheckSuccessful && regionsCheckSuccessful && proximitiesCheckSuccessful;
 }
@@ -425,6 +424,10 @@ std::vector<Tile> Level::GetEmptyTilesInVector(const std::vector<Tile>& tiles) c
 
 void Level::Reset()
 {
+    UiSettings::LEVEL_COMPLETED = false;
+    UiSettings::LEVEL_COMPLETED_TIME = INT_MAX;
+    UiSettings::POPUP_HAS_BEEN_CLOSED = false;
+
     for (size_t i = 0; i < m_tiles.size(); i++)
     {
         for (size_t j = 0; j < m_tiles[0].size(); j++)
@@ -432,40 +435,214 @@ void Level::Reset()
             m_tiles[i][j].ClearMark();
         }
     }
+
+    m_queens.clear();
+
+    m_clock.restart();
 }
 
 void Level::Solve()
 {
+    std::cout << "---------- Solving start..." << std::endl;
+
+    // After each move, we will check if the level has been completed
+    // also, we will only make 1 move at a time, so it is easy to track the changes
     bool moveDone = false;
 
-    // TODO: extract each "rule" to a helper function
-
-    // 1. Check that for all queens, all related crossing out has been done
-    for (size_t i = 0; i < m_tiles.size(); i++)
+    // 1 - For all queens, make sure all related crossing out has been done
+    moveDone = QueensCrossOutRelatedTiles();
+    if (moveDone)
     {
-        for (size_t j = 0; j < m_tiles[0].size(); j++)
-        {
-            const Tile& tile = m_tiles[i][j];
-            if (tile.isMarkQueen())
-            {
-                const bool crossedOutAnyTilesInRow = CrossOutTilesInRow(tile);
-                const bool crossedOutAnyTilesInColumn = CrossOutTilesInColumn(tile);
-                const bool crossedOutAnyTilesInProximity = CrossOutTilesInProximity(tile);
-                const bool crossedOutAnyTilesInRegion = CrossOutTilesInRegion(tile);
+        InternalCheck();
+        return;
+    }
 
-                moveDone = crossedOutAnyTilesInRow || crossedOutAnyTilesInColumn || crossedOutAnyTilesInProximity || crossedOutAnyTilesInRegion;
-                if (moveDone)
+    // 2 - Check if there are regions with only 1 empty tile
+    //     This includes:
+    //     - regions with exclusively only 1 tile
+    //     - regions with more than 1 tile but only 1 empty one
+    //     If so, mark it as a queen
+    moveDone = MarkQueenInRegionsWithOnlyOneEmptyTile();
+    if (moveDone)
+    {
+        InternalCheck();
+        return;
+    }
+    
+    // 3 - Check if there are any rows or columns with only 1 empty tile
+    //     If so, mark it as a queen
+    moveDone = MarkQueenInRowsOrColumnsWithOnlyOneEmptyTile();
+    if (moveDone)
+    {
+        InternalCheck();
+        return;
+    }
+
+    // 4. Check if there are any rows or columns which are completely of the same colour
+    //    If so, cross out the rest of the tiles in the region of that colour
+    //    Edge case: if there's a row and a column of the same colour which coincide in a tile, mark it as a queen and cross out the rest of the tiles in the region
+    moveDone = CrossingOutTilesInRegionExceptRowOrColumn();
+    if (moveDone)
+    {
+        InternalCheck();
+        return;
+    }
+
+    // 5. Check if there any regions for which all its empty tiles are in the same row or column
+    //    If so, cross out the rest of the tiles in the row or column which do not correspond to the region itself
+    moveDone = CrossOutRowOrColumnExceptRegion();
+    if (moveDone)
+    {
+        InternalCheck();
+        return;
+    }
+
+    // TODO
+
+    // 6 - Check if there are at least 2 regions that uniquely share some rows or columns,
+    //     if so, cross out the rest of the tiles in those rows or columns which do not correspond to the regions themselves
+    //     because we know for sure queens in those rows and columns will have to be placed in those regions
+
+    // 7 - Check if there any tiles that if marked as a queen, would make for a row, column or region to be completely crossed out
+    //     if so, that tile should be crossed out because a queen cannot be placed there
+
+    std::cout << "---------- Solving end..." << std::endl;
+}
+
+bool Level::QueensCrossOutRelatedTiles()
+{
+    bool crossedOutAnything = false;
+    
+    for (const Tile& queen : m_queens)
+    {
+        // clang-format off
+        const bool crossedOutAnyTilesInRow       = CrossOutTilesInRow(queen);
+        const bool crossedOutAnyTilesInColumn    = CrossOutTilesInColumn(queen);
+        const bool crossedOutAnyTilesInProximity = CrossOutTilesInProximity(queen);
+        const bool crossedOutAnyTilesInRegion    = CrossOutTilesInRegion(queen);
+        // clang-format on
+
+        crossedOutAnything = crossedOutAnyTilesInRow || crossedOutAnyTilesInColumn || crossedOutAnyTilesInProximity || crossedOutAnyTilesInRegion;
+    }
+
+    return crossedOutAnything;
+}
+
+bool Level::CrossOutTilesInRow(const Tile& tile)
+{
+    bool crossedOutAny = false;
+
+    const sf::Vector2i& tileCoords = tile.GetCoords();
+    for (size_t j = 0; j < m_tiles.size(); j++)
+    {
+        if (j != tileCoords.y)
+        {
+            Tile& tileCandidate = m_tiles[tileCoords.x][j];
+            // Only if the tile has still not been marked as a Queen or X, i.e., it's empty
+            if (tileCandidate.isMarkEmpty())
+            {
+                tileCandidate.PlaceX();
+
+                // We set the flag to true if we have crossed out any tile
+                if (!crossedOutAny)
                 {
-                    return; // 1 move at a time
+                    // And log a message, but only once
+                    std::cout << "Crossing out tiles in row " << tileCoords.x << std::endl;
+
+                    crossedOutAny = true;
                 }
             }
         }
     }
 
-    // 2. Check if there are regions with only 1 empty tile
-    // This includes:
-    // - regions with exclusively only 1 tile
-    // - regions with more than 1 tile but only 1 empty one
+    return crossedOutAny;
+}
+
+bool Level::CrossOutTilesInColumn(const Tile& tile)
+{
+    bool crossedOutAny = false;
+
+    const sf::Vector2i& tileCoords = tile.GetCoords();
+    for (size_t i = 0; i < m_tiles[0].size(); i++)
+    {
+        if (i != tileCoords.x)
+        {
+            Tile& tileCandidate = m_tiles[i][tileCoords.y];
+            // Only if the tile has still not been marked as a Queen or X, i.e., it's empty
+            if (tileCandidate.isMarkEmpty())
+            {
+                tileCandidate.PlaceX();
+
+                // We set the flag to true if we have crossed out any tile
+                if (!crossedOutAny)
+                {
+                    // And log a message, but only once
+                    std::cout << "Crossing out tiles in column " << tileCoords.y << std::endl;
+                    
+                    crossedOutAny = true;
+                }
+            }
+        }
+    }
+
+    return crossedOutAny;
+}
+
+bool Level::CrossOutTilesInProximity(const Tile& tile)
+{
+    bool crossedOutAny = false;
+
+    const std::vector<Tile>& neighbours = GetNeighboursOfTile(tile);
+    for (const Tile& neighbour : neighbours)
+    {
+        if (neighbour.isMarkEmpty())
+        {
+            const sf::Vector2i neighbourCoords = neighbour.GetCoords();
+            m_tiles[neighbourCoords.x][neighbourCoords.y].PlaceX();
+
+            // We set the flag to true if we have crossed out any tile
+            if (!crossedOutAny)
+            {
+                // And log a message, but only once
+                std::cout << "Crossing out tiles in proximity of tile " << tile.GetId() << std::endl;
+
+                crossedOutAny = true;
+            }
+        }
+    }
+
+    return crossedOutAny;
+}
+
+bool Level::CrossOutTilesInRegion(const Tile& tile)
+{
+    bool crossedOutAny = false;
+
+    const int tileColorId = tile.GetColorId();
+    const std::vector<Tile>& regionTiles = GetTilesInRegion(tileColorId);
+    for (const Tile& regionTile : regionTiles)
+    {
+        if (regionTile.isMarkEmpty())
+        {
+            const sf::Vector2i regionTileCoords = regionTile.GetCoords();
+            m_tiles[regionTileCoords.x][regionTileCoords.y].PlaceX();
+
+            // We set the flag to true if we have crossed out any tile
+            if (!crossedOutAny)
+            {
+                // And log a message, but only once
+                std::cout << "Crossing out tiles in region " << tileColorId << std::endl;
+
+                crossedOutAny = true;
+            }
+        }
+    }
+
+    return crossedOutAny;
+}
+
+bool Level::MarkQueenInRegionsWithOnlyOneEmptyTile()
+{
     const size_t numRegions = m_regionsColors.size();
     for (size_t i = 0; i < numRegions; i++)
     {
@@ -478,34 +655,214 @@ void Level::Solve()
             const Tile& tile = emptyTilesInRegion[0];
             const sf::Vector2i& tileCoords = tile.GetCoords();
             
-            // First, we mark the tile as a queen
+            // We mark the tile as a queen
             m_tiles[tileCoords.x][tileCoords.y].PlaceQueen();
+            m_queens.emplace_back(m_tiles[tileCoords.x][tileCoords.y]);
 
             std::cout << "Region " << i + 1 << " has only 1 tile available, therefore marked it with a queen (coords.: [" << tileCoords.x << ", " << tileCoords.y << "])" << std::endl;
+            
+            return true;
+        }
+    }
 
-            // Second, we cross out the rest of the tiles in same row, column and its proximity
-            // (we would also cross out other tiles in the same region, but in this case there is only 1 tile in the region, so it does not make sense)
-            const bool crossedOutAnyTilesInRow = CrossOutTilesInRow(tile);
-            const bool crossedOutAnyTilesInColumn = CrossOutTilesInColumn(tile);
-            const bool crossedOutAnyTilesInProximity = CrossOutTilesInProximity(tile);
+    return false;
+}
 
-            moveDone = crossedOutAnyTilesInRow || crossedOutAnyTilesInColumn || crossedOutAnyTilesInProximity;
-            if (moveDone)
+bool Level::MarkQueenInRowsOrColumnsWithOnlyOneEmptyTile()
+{
+    for (size_t i = 0; i < m_tiles.size(); i++)
+    {
+        // Get the tiles in the row and column
+        const std::vector<Tile>& tilesInRow = GetTilesInRow(i);
+        const std::vector<Tile>& tilesInColumn = GetTilesInColumn(i);
+
+        // Get the empty tiles in the row and column
+        const std::vector<Tile>& emptyTilesInRow = GetEmptyTilesInVector(tilesInRow);
+        const std::vector<Tile>& emptyTilesInColumn = GetEmptyTilesInVector(tilesInColumn);
+
+        // Select a tile from the row or column if any of them has only 1 empty tile
+
+        // This declares a pointer to a const Tile
+        // The pointer itself is not const, so it is posible to change what it points to
+        const Tile* tile = nullptr;
+        if (emptyTilesInRow.size() == 1)
+        {
+            // Here, we are changing the pointer to point to the first element of emptyTilesInRow. This is allowed because the pointer itself is not const
+            tile = &emptyTilesInRow[0];
+        }
+        else if (emptyTilesInColumn.size() == 1)
+        {
+            // Similarly, we are changing the pointer to point to the first element of emptyTilesInColumn
+            tile = &emptyTilesInColumn[0];
+        }
+        
+        if (tile)
+        {
+            const sf::Vector2i& tileCoords = tile->GetCoords();
+            
+            // We mark the tile as a queen
+            m_tiles[tileCoords.x][tileCoords.y].PlaceQueen();
+            m_queens.emplace_back(m_tiles[tileCoords.x][tileCoords.y]);
+
+            const std::string rowOrColumn = emptyTilesInRow.size() == 1 ? "Row" : "Column";
+            std::cout << rowOrColumn << " " << i + 1 << " has only 1 tile available, therefore marked it with a queen (coords.: [" << tileCoords.x << ", " << tileCoords.y << "])" << std::endl;
+
+            return true;
+        }
+    }
+
+    return false;
+}
+
+bool Level::CrossingOutTilesInRegionExceptRowOrColumn()
+{
+    for (size_t i = 0; i < m_tiles.size(); i++)
+    {
+        for (size_t j = 0; j < m_tiles[0].size(); j++)
+        {
+            // TODO: I'm pretty sure I'm over-checking here by going through all rows and columns...
+            //       Try to come up with a better condition to optimise this
+
+            // Get the tiles in the row and the column
+            const std::vector<Tile>& tilesInRow = GetTilesInRow(i);
+            const std::vector<Tile>& tilesInColumn = GetTilesInColumn(j);
+
+            const int regionColorId = tilesInRow[0].GetColorId(); // or tilesInColumn[0].GetColorId(), it does not matter
+
+            // Check if all tiles in the row or column belong to the same region
+            const bool tilesInRowBelongToTheSameRegion = std::all_of(tilesInRow.begin(), tilesInRow.end(), [&](const Tile& tile) {
+                return regionColorId == tile.GetColorId();
+            });
+            const bool tilesInColumnBelongToTheSameRegion = std::all_of(tilesInColumn.begin(), tilesInColumn.end(), [&](const Tile& tile) {
+                return regionColorId == tile.GetColorId();
+            });
+
+            // Edge case: if there's a row and a column of the same colour which coincide in a tile, mark it as a queen
+            if (tilesInRowBelongToTheSameRegion && tilesInColumnBelongToTheSameRegion)
             {
-                return; // 1 move at a time
+                if (m_tiles[i][j].isMarkEmpty())
+                {
+                    m_tiles[i][j].PlaceQueen();
+                    m_queens.emplace_back(m_tiles[i][j]);
+                    
+                    return true;
+                }
+            }
+            else if (tilesInRowBelongToTheSameRegion)
+            {
+                // Cross out all the other tiles in the region different that are not in this row and that are empty
+                const std::vector<Tile>& tilesInRegion = GetTilesInRegion(regionColorId);
+                for (const Tile& tile : tilesInRegion)
+                {
+                    if (tile.GetCoords().x != i && tile.isMarkEmpty())
+                    {
+                        m_tiles[tile.GetCoords().x][tile.GetCoords().y].PlaceX();
+                    }
+                }
+                    
+                return true;
+            }
+            else if (tilesInColumnBelongToTheSameRegion)
+            {
+                // Cross out all the other tiles in the region different that are not in this row and that are empty
+                const std::vector<Tile>& tilesInRegion = GetTilesInRegion(regionColorId);
+                for (const Tile& tile : tilesInRegion)
+                {
+                    if (tile.GetCoords().y != j && tile.isMarkEmpty())
+                    {
+                        m_tiles[tile.GetCoords().x][tile.GetCoords().y].PlaceX();
+                    }
+                }
+
+                return true;
+            }
+
+            return false;
+        }
+    }
+
+    return false;
+}
+
+bool Level::CrossOutRowOrColumnExceptRegion()
+{
+    const size_t numRegions = m_regionsColors.size();
+    for (size_t i = 0; i < numRegions; i++)
+    {
+        const std::vector<Tile>& regionTiles = GetTilesInRegion(m_regionsColors.at(i).first);
+        const std::vector<Tile>& emptyTilesInRegion = GetEmptyTilesInVector(regionTiles);
+
+        if (!emptyTilesInRegion.empty())
+        {
+            const int rowCandidate = emptyTilesInRegion[0].GetCoords().x;
+            const int columnCandidate = emptyTilesInRegion[0].GetCoords().y;
+
+            // Check if all empty tiles in region are either in the same row or column
+            const bool allEmptyTilesInSameRow = std::all_of(emptyTilesInRegion.begin(), emptyTilesInRegion.end(), [&](const Tile& tile) {
+                return tile.GetCoords().x == rowCandidate;
+            });
+            const bool allEmptyTilesInSameColumn = std::all_of(emptyTilesInRegion.begin(), emptyTilesInRegion.end(), [&](const Tile& tile) {
+                return tile.GetCoords().y == columnCandidate;
+            });
+
+            if (allEmptyTilesInSameRow || allEmptyTilesInSameColumn)
+            {
+                // We get the rest of the tiles in the same row or column that do not belong to the region
+                const std::vector<Tile>& restOfTilesInSameRowOrColumn = allEmptyTilesInSameRow ? GetTilesInRow(rowCandidate) : GetTilesInColumn(columnCandidate);
+                std::vector<Tile> restOfTilesInSameRowOrColumnOfDifferentRegions;
+                for (const Tile& tile : restOfTilesInSameRowOrColumn)
+                {
+                    if (tile.GetColorId() != i)
+                    {
+                        restOfTilesInSameRowOrColumnOfDifferentRegions.emplace_back(tile);
+                    }
+                }
+                const bool areRestOfTilesInSameRowOrColumnMarkedWithX = std::all_of(restOfTilesInSameRowOrColumnOfDifferentRegions.begin(), restOfTilesInSameRowOrColumnOfDifferentRegions.end(), [&](const Tile& tile) {
+                    return tile.isMarkX();
+                });
+
+                // If the rest of the tiles in the row or column are not marked with an X, we cross them out
+                // else, there's nothing else to do in this row
+                if (!areRestOfTilesInSameRowOrColumnMarkedWithX)
+                {
+                    const std::string rowOrColumn = allEmptyTilesInSameRow ? "row " + std::to_string(rowCandidate) : "column " + std::to_string(columnCandidate);
+                    std::cout << "Crossing out tiles in " << rowOrColumn << std::endl;
+                    for (size_t j = 0; j < m_tiles[0].size(); j++)
+                    {
+                        const sf::Vector2i& coords = allEmptyTilesInSameRow ? sf::Vector2i(rowCandidate, j) : sf::Vector2i(j, columnCandidate);
+                        const Tile& tileCandidate = m_tiles[coords.x][coords.y];
+
+                        // If the tile does not belong to the region and it is still empty, we cross it out
+                        if (tileCandidate.GetColorId() != i && tileCandidate.isMarkEmpty())
+                        {
+                            m_tiles[coords.x][coords.y].PlaceX();
+                        }
+                    }
+
+                    return true;
+                }
             }
         }
     }
 
-    // 3. Check if there any regions for which all its empty tiles are in the same row or column
-    //    If so, cross out the rest of the tiles in the row or column which do not correspond to the region itself
+    return false;
+}
 
-    // 4. Check if there are any rows or columns which are completely of the same colour
-    //    If so, cross out the rest of the tiles in the region of that colour
-    //    Edge case: if there's a row and a column of the same colour which coincide in a tile, mark it as a queen and cross out the rest of the tiles in the region
+const std::vector<Tile>& Level::GetTilesInRow(int row) const
+{
+    return m_tiles[row];
+}
 
-    // After each move, we check if the level has been completed
-    InternalCheck();
+std::vector<Tile> Level::GetTilesInColumn(int column) const
+{
+    std::vector<Tile> tiles;
+
+    for (size_t i = 0; i < m_tiles[0].size(); i++)
+    {
+        tiles.emplace_back(m_tiles[i][column]);
+    }
+
+    return tiles;
 }
 
 std::vector<Tile> Level::GetTilesInRegion(int colorId) const
@@ -547,119 +904,7 @@ std::vector<Tile> Level::GetTilesInRegion(const std::string& colorStr) const
     return region;
 }
 
-bool Level::CrossOutTilesInRow(const Tile& tile)
-{
-    bool crossedOutAny = false;
-
-    const sf::Vector2i& tileCoords = tile.GetCoords();
-
-    std::cout << "Crossing out tiles in row " << tileCoords.x << std::endl;
-
-    for (size_t j = 0; j < m_tiles.size(); j++)
-    {
-        if (j != tileCoords.y)
-        {
-            Tile& tileCandidate = m_tiles[tileCoords.x][j];
-            // Only if the tile has still not been marked as a Queen or X, i.e., it's empty
-            if (tileCandidate.isMarkEmpty())
-            {
-                tileCandidate.PlaceX();
-
-                // We set the flag to true if we have crossed out any tile
-                if (!crossedOutAny)
-                {
-                    crossedOutAny = true;
-                }
-            }
-        }
-    }
-
-    return crossedOutAny;
-}
-
-bool Level::CrossOutTilesInColumn(const Tile& tile)
-{
-    bool crossedOutAny = false;
-
-    const sf::Vector2i& tileCoords = tile.GetCoords();
-
-    std::cout << "Crossing out tiles in column " << tileCoords.y << std::endl;
-
-    for (size_t i = 0; i < m_tiles[0].size(); i++)
-    {
-        if (i != tileCoords.x)
-        {
-            Tile& tileCandidate = m_tiles[i][tileCoords.y];
-            // Only if the tile has still not been marked as a Queen or X, i.e., it's empty
-            if (tileCandidate.isMarkEmpty())
-            {
-                tileCandidate.PlaceX();
-
-                // We set the flag to true if we have crossed out any tile
-                if (!crossedOutAny)
-                {
-                    crossedOutAny = true;
-                }
-            }
-        }
-    }
-
-    return crossedOutAny;
-}
-
-bool Level::CrossOutTilesInProximity(const Tile& tile)
-{
-    bool crossedOutAny = false;
-
-    std::cout << "Crossing out tiles in proximity of tile " << tile.GetId() << std::endl;
-
-    const std::vector<Tile>& neighbours = GetNeighboursOfTile(tile);
-    for (const Tile& neighbour : neighbours)
-    {
-        if (neighbour.isMarkEmpty())
-        {
-            const sf::Vector2i neighbourCoords = neighbour.GetCoords();
-            m_tiles[neighbourCoords.x][neighbourCoords.y].PlaceX();
-
-            // We set the flag to true if we have crossed out any tile
-            if (!crossedOutAny)
-            {
-                crossedOutAny = true;
-            }
-        }
-    }
-
-    return crossedOutAny;
-}
-
-bool Level::CrossOutTilesInRegion(const Tile& tile)
-{
-    bool crossedOutAny = false;
-
-    const int tileColorId = tile.GetColorId();
-
-    std::cout << "Crossing out tiles in region " << tileColorId << std::endl;
-
-    const std::vector<Tile>& regionTiles = GetTilesInRegion(tileColorId);
-    for (const Tile& regionTile : regionTiles)
-    {
-        if (regionTile.isMarkEmpty())
-        {
-            const sf::Vector2i regionTileCoords = regionTile.GetCoords();
-            m_tiles[regionTileCoords.x][regionTileCoords.y].PlaceX();
-
-            // We set the flag to true if we have crossed out any tile
-            if (!crossedOutAny)
-            {
-                crossedOutAny = true;
-            }
-        }
-    }
-
-    return crossedOutAny;
-}
-
-std::string Level::ColorIdToColorStr(int colorId) const
+const std::string& Level::ColorIdToColorStr(int colorId) const
 {
     return m_regionsColors.at(colorId).first;
 }

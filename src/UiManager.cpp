@@ -1,16 +1,13 @@
 #include "UiManager.hpp"
 
 #include <algorithm> // for std::sort
-#include <climits>
 #include <filesystem>
 #include <string>
 
 #include "imgui-SFML.h"
 #include "imgui.h"
 
-#include <SFML/Graphics.hpp>
-#include <SFML/System.hpp>
-#include <SFML/Window.hpp>
+#include "SFML/Window/Event.hpp"
 
 #include "GlobalSettings.hpp"
 #include "Level.hpp"
@@ -99,13 +96,13 @@ void UiManager::HandleUi(sf::RenderWindow& window, Level& level, float fps)
     // The following can be considered "in game" UI
     if (level.HasLoaded())
     {
-        // If the level is still in progress, we show the time elapsed
-        if (UiSettings::LEVEL_COMPLETED_TIME == INT_MAX)
-        {
-            ShowElapsedTime(level);
-        }
-        // Else, we show the time it took to complete it
-        else
+        // We show the elapsed time at all times which can be either:
+        // - While the user is solving the level, i.e. in progress
+        // - The total elapsed time after the user has completed the level and the completion popup has been closed
+        ShowElapsedTime(level);
+
+        // If the level has been completed, we show a completion popup
+        if (UiSettings::LEVEL_COMPLETED && !UiSettings::POPUP_HAS_BEEN_CLOSED)
         {
             ShowLevelCompleted();
         }
@@ -223,7 +220,6 @@ void UiManager::LoadLevel(Level& level)
             if (ImGui::Selectable(m_levelsToLoad[i].data(), isSelected))
             {
                 UiSettings::LEVEL_CURRENT_INDEX = i;
-                UiSettings::LEVEL_COMPLETED_TIME = INT_MAX; // Reset level completed time
 
                 level.Clear();
                 level.Load(m_levelsToLoad[UiSettings::LEVEL_CURRENT_INDEX]);
@@ -262,7 +258,11 @@ void UiManager::SolveLevel(Level& level)
 
 void UiManager::ShowElapsedTime(Level& level)
 {
-    const int timeElapsed = static_cast<int>(level.GetClock().getElapsedTime().asSeconds());
+    int timeElapsed = static_cast<int>(level.GetClock().getElapsedTime().asSeconds());
+    if (UiSettings::LEVEL_COMPLETED)
+    {
+        timeElapsed = UiSettings::LEVEL_COMPLETED_TIME;
+    }
     ImGui::Text("Time elapsed: %d seconds", timeElapsed);
 }
 
@@ -272,10 +272,13 @@ void UiManager::ShowLevelCompleted()
 
     if (ImGui::BeginPopupModal("Level completed", NULL, ImGuiWindowFlags_AlwaysAutoResize))
     {
-        ImGui::Text("Good job! You completed the level in %d seconds!", UiSettings::LEVEL_COMPLETED_TIME);
+        ImGui::Text("Good job!");
+        ImGui::Text("You've completed the level in %d seconds!", UiSettings::LEVEL_COMPLETED_TIME);
         ImGui::Separator();
         if (ImGui::Button("Close", ImVec2(120, 0)))
         {
+            UiSettings::POPUP_HAS_BEEN_CLOSED = true;
+            
             ImGui::CloseCurrentPopup();
         }
         ImGui::EndPopup();
